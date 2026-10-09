@@ -14,6 +14,12 @@
       "name": "Minecraft",
       "description": "Minecraft Java Edition 26.2, powered by Eaglercraft!",
       "openInNewTab": false
+    },
+    {
+      "image": "https://media.contentapi.ea.com/content/dam/gin/images/2017/01/skate-3-key-art.jpg.adapt.crop16x9.575p.jpg",
+      "playUrl": "https://skate.aaddpp.lol/",
+      "name": "Skate 3",
+      "description": "Find your next line in this unofficial browser skateboarding game."
     }
   ]
 }
