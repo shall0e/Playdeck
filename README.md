@@ -2,13 +2,12 @@
 
 [Playdeck](https://playdeck.landoesp.chatgpt.site/) loads this public repository's `games.json` on each visit. Edit that file to update the game grid; no site deployment is needed.
 
-Each game uses only five fields:
+Each game uses only four fields:
 
 ```json
 {
   "image": "https://example.com/cover.jpg",
   "playUrl": "https://example.com/play/",
-  "multiplayer": false,
   "name": "My game",
   "description": "A short description of the game."
 }
