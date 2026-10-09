@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "title": "Playdeck game library",
+  "games": [
+    {
+      "id": "tanx",
+      "name": "TANX",
+      "description": "Jump into a colorful arena, find your angle, and outmaneuver rival tanks.",
+      "category": "Action",
+      "tags": [
+        "action",
+        "browser",
+        "multiplayer"
+      ],
+      "playUrl": "https://tanx.io/",
+      "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/tanx/hero.jpg",
+      "sourceUrl": "https://playcanvas.com/project/45093/overview/tanx",
+      "creator": "Maksims Mihejevs",
+      "controls": "WASD / arrow keys to move \u00b7 Mouse to aim \u00b7 Click to fire",
+      "mobile": true,
+      "multiplayer": true,
+      "featured": true,
+      "enabled": true,
+      "license": "Unknown"
+    },
+    {
+      "id": "2048",
+      "name": "2048",
+      "description": "Slide. Combine. Repeat. A simple number puzzle that always turns into one more try.",
+      "category": "Puzzle",
+      "tags": [
+        "puzzle",
+        "browser",
+        "single-player"
+      ],
+      "playUrl": "https://openarcade.github.io/2048/",
+      "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/2048/hero.jpg",
+      "sourceUrl": "https://github.com/openarcade/2048",
+      "creator": "Brandon Poe",
+      "controls": "Arrow keys or swipe to slide the tiles",
+      "mobile": true,
+      "multiplayer": false,
+      "featured": true,
+      "enabled": true,
+      "license": "MIT"
+    },
+    {
+      "id": "snake",
+      "name": "Snake",
+      "description": "Collect the food, grow your snake, and keep one step ahead of your own tail.",
+      "category": "Arcade",
+      "tags": [
+        "arcade",
+        "browser",
+        "single-player"
+      ],
+      "playUrl": "https://iamchrismiller.github.io/responsive-snake/example/",
+      "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/snake/hero.jpg",
+      "sourceUrl": "https://github.com/iamchrismiller/responsive-snake",
+      "creator": "Chris Miller",
+      "controls": "Arrow keys / WASD to steer \u00b7 Swipe on touch screens",
+      "mobile": true,
+      "multiplayer": false,
+      "featured": true,
+      "enabled": true,
+      "license": "MIT"
+    },
+    {
+      "id": "alges-escapade",
+      "name": "Alge's Escapade",
+      "description": "Break out of Area 51. Navigate obstacles and reach the escape tube at the end of each level.",
+      "category": "Platformer",
+      "tags": [
+        "platformer",
+        "browser",
+        "single-player"
+      ],
+      "playUrl": "https://dave-and-mike.github.io/game-off-2012/",
+      "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/alges-escapade/icon@2x.png",
+      "sourceUrl": "https://github.com/dave-and-mike/game-off-2012",
+      "creator": "David North, Lee Reilly",
+      "controls": "Arrow keys to move and jump \u00b7 Follow the in-game instructions",
+      "mobile": false,
+      "multiplayer": false,
+      "featured": false,
+      "enabled": true,
+      "license": "Unknown"
+    },
+    {
+      "id": "alien-invasion",
+      "name": "Alien Invasion",
+      "description": "Defend Earth from a wave of incoming invaders in a classic arcade shootout.",
+      "category": "Action",
+      "tags": [
+        "action",
+        "browser",
+        "single-player"
+      ],
+      "playUrl": "https://cykod.github.io/AlienInvasion/",
+      "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/alien-invasion/icon@2x.png",
+      "sourceUrl": "https://github.com/cykod/AlienInvasion",
+      "creator": "Pascal Rettig",
+      "controls": "Arrow keys to move \u00b7 Space to fire \u00b7 Touch controls on mobile",
+      "mobile": true,
+      "multiplayer": false,
+      "featured": false,
+      "enabled": true,
+      "license": "GPL + MIT"
+    },
+    {
+      "id": "ball-and-wall",
+      "name": "Ball and Wall",
+      "description": "Keep the ball moving and clear the wall, one perfectly timed bounce at a time.",
+      "category": "Arcade",
+      "tags": [
+        "arcade",
+        "browser",
+        "single-player"
+      ],
+      "playUrl": "https://budnix.github.io/ball-and-wall/",
+      "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/ball-and-wall/icon@2x.png",
+      "sourceUrl": "https://github.com/budnix/ball-and-wall",
+      "creator": "Krzysztof Budnik",
+      "controls": "Left / right arrow keys to move \u00b7 Follow the in-game start prompt",
+      "mobile": false,
+      "multiplayer": false,
+      "featured": false,
+      "enabled": true,
+      "license": "MIT"
+    },
+    {
+      "id": "coil",
+      "name": "Coil",
+      "description": "Draw loops around enemies before they overwhelm you. Fast hands make all the difference.",
+      "category": "Arcade",
+      "tags": [
+        "arcade",
+        "browser",
+        "single-player"
+      ],
+      "playUrl": "https://lab.hakim.se/coil/",
+      "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/coil/icon@2x.png",
+      "sourceUrl": "https://github.com/leereilly/Coil",
+      "creator": "Hakim El Hattab",
+      "controls": "Move the pointer to draw a loop around enemies",
+      "mobile": true,
+      "multiplayer": false,
+      "featured": false,
+      "enabled": true,
+      "license": "MIT"
+    },
+    {
+      "id": "custom-tetris",
+      "name": "Custom Tetris",
+      "description": "A familiar falling-block puzzle with a twist: change the rules and make it your own.",
+      "category": "Puzzle",
+      "tags": [
+        "puzzle",
+        "browser",
+        "single-player"
+      ],
+      "playUrl": "https://ondras.github.io/custom-tetris/",
+      "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/custom-tetris/icon@2x.png",
+      "sourceUrl": "https://github.com/ondras/custom-tetris",
+      "creator": "Ond\u0159ej \u017d\u00e1ra",
+      "controls": "Configure your keys and rules in the game\u2019s settings",
+      "mobile": false,
+      "multiplayer": false,
+      "featured": false,
+      "enabled": true,
+      "license": "Unknown"
+    },
+    {
+      "id": "fluid-table-tennis",
+      "name": "Fluid Table Tennis",
+      "description": "A table-tennis match with swirling fluid physics. Keep the ball in play and ride the flow.",
+      "category": "Arcade",
+      "tags": [
+        "arcade",
+        "browser",
+        "single-player"
+      ],
+      "playUrl": "https://anirudhjoshi.github.io/fluid_table_tennis/",
+      "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/fluid-table-tennis/icon@2x.png",
+      "sourceUrl": "https://github.com/anirudhjoshi/fluid_table_tennis",
+      "creator": "anirudhjoshi",
+      "controls": "Use the game\u2019s keyboard controls to move the paddles",
+      "mobile": false,
+      "multiplayer": false,
+      "featured": false,
+      "enabled": true,
+      "license": "Copyrighted"
+    }
+  ]
+}
