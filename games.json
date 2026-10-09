@@ -5,63 +5,54 @@
     {
       "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/tanx/hero.jpg",
       "playUrl": "https://tanx.io/",
-      "multiplayer": true,
       "name": "TANX",
       "description": "Jump into a colorful arena, find your angle, and outmaneuver rival tanks."
     },
     {
       "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/2048/hero.jpg",
       "playUrl": "https://openarcade.github.io/2048/",
-      "multiplayer": false,
       "name": "2048",
       "description": "Slide. Combine. Repeat. A simple number puzzle that always turns into one more try."
     },
     {
       "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/snake/hero.jpg",
       "playUrl": "https://iamchrismiller.github.io/responsive-snake/example/",
-      "multiplayer": false,
       "name": "Snake",
       "description": "Collect the food, grow your snake, and keep one step ahead of your own tail."
     },
     {
       "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/alges-escapade/icon@2x.png",
       "playUrl": "https://dave-and-mike.github.io/game-off-2012/",
-      "multiplayer": false,
       "name": "Alge's Escapade",
       "description": "Break out of Area 51. Navigate obstacles and reach the escape tube at the end of each level."
     },
     {
       "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/alien-invasion/icon@2x.png",
       "playUrl": "https://cykod.github.io/AlienInvasion/",
-      "multiplayer": false,
       "name": "Alien Invasion",
       "description": "Defend Earth from a wave of incoming invaders in a classic arcade shootout."
     },
     {
       "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/ball-and-wall/icon@2x.png",
       "playUrl": "https://budnix.github.io/ball-and-wall/",
-      "multiplayer": false,
       "name": "Ball and Wall",
       "description": "Keep the ball moving and clear the wall, one perfectly timed bounce at a time."
     },
     {
       "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/coil/icon@2x.png",
       "playUrl": "https://lab.hakim.se/coil/",
-      "multiplayer": false,
       "name": "Coil",
       "description": "Draw loops around enemies before they overwhelm you. Fast hands make all the difference."
     },
     {
       "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/custom-tetris/icon@2x.png",
       "playUrl": "https://ondras.github.io/custom-tetris/",
-      "multiplayer": false,
       "name": "Custom Tetris",
       "description": "A familiar falling-block puzzle with a twist: change the rules and make it your own."
     },
     {
       "image": "https://raw.githubusercontent.com/OpenArcade/openarcade.github.io/master/img/games/fluid-table-tennis/icon@2x.png",
       "playUrl": "https://anirudhjoshi.github.io/fluid_table_tennis/",
-      "multiplayer": false,
       "name": "Fluid Table Tennis",
       "description": "A table-tennis match with swirling fluid physics. Keep the ball in play and ride the flow."
     }
