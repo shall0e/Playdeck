@@ -15,7 +15,7 @@ Each game requires four fields:
 
 Add entries to the `games` array and keep `version` set to `1`. Cards appear in catalog order. `image` can be an HTTPS URL or a path relative to `games.json`, such as `images/my-game.png`. `playUrl` must use HTTPS. The schema is in `games.schema.json`.
 
-Optional: set `"openInNewTab": true` on a game to open its `playUrl` in a new tab. Omit it or set it to `false` to use the fullscreen player. Eaglercraft uses `true` because its launcher blocks embedding.
+Optional: set `"openInNewTab": true` on a game to open its `playUrl` in a new tab. Omit it or set it to `false` to use the fullscreen player. Use `true` for hosts that block embedding.
 
 Catalog URL: `https://raw.githubusercontent.com/shall0e/Playdeck/main/games.json`
 
