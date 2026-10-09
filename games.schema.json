@@ -2,23 +2,47 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Playdeck catalog",
   "type": "object",
-  "required": ["version", "games"],
+  "required": [
+    "version",
+    "games"
+  ],
   "properties": {
-    "version": { "const": 1 },
-    "title": { "type": "string" },
+    "version": {
+      "const": 1
+    },
+    "title": {
+      "type": "string"
+    },
     "games": {
       "type": "array",
       "maxItems": 2000,
       "items": {
         "type": "object",
-        "required": ["image", "playUrl", "multiplayer", "name", "description"],
+        "required": [
+          "image",
+          "playUrl",
+          "name",
+          "description"
+        ],
         "additionalProperties": false,
         "properties": {
-          "image": { "type": "string", "minLength": 1 },
-          "playUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
-          "multiplayer": { "type": "boolean" },
-          "name": { "type": "string", "minLength": 1 },
-          "description": { "type": "string", "minLength": 1 }
+          "image": {
+            "type": "string",
+            "minLength": 1
+          },
+          "playUrl": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     }
