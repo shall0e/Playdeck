@@ -80,8 +80,7 @@
       "name": "Kerbal Space Program",
       "description": "Kerbal Space Program, 32 bit / 64 bit",
       "openInNewTab": true,
-      "warning": "Playing through embed is not supported, game will open in a new tab.",
-      "noProxy": true
+      "warning": "Playing through embed is not supported, game will open in a new tab."
     }
   ]
 }
