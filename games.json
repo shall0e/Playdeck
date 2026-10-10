@@ -14,7 +14,11 @@
       "image": "https://i.ytimg.com/vi/jwCKCu3I8tk/maxresdefault.jpg",
       "playUrl": "https://eaglercraft-26-2--cookie9834.on.websim.com/",
       "name": "Minecraft",
-      "description": "Minecraft Java Edition 26.2, powered by Eaglercraft!"
+      "description": "Minecraft Java Edition 26.2, powered by Eaglercraft!",
+      "proxyHosts": [
+        "api.websim.com",
+        "images.websim.com"
+      ]
     },
     {
       "image": "https://static0.gamerantimages.com/wordpress/wp-content/uploads/Skate-3-Review1.jpg?w=1200&h=628&fit=crop",
@@ -60,7 +64,10 @@
       "name": "Plants vs. Zombies 2",
       "description": "Plants vs. Zombies 2: Gardenless.",
       "openInNewTab": true,
-      "warning": "Playing through embed is not supported, game will open in a new tab."
+      "warning": "Playing through embed is not supported, game will open in a new tab.",
+      "proxyHosts": [
+        "pvzge.com"
+      ]
     },
     {
       "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/220200/page_bg_raw.jpg?t=1738037585",
