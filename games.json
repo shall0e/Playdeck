@@ -3,11 +3,12 @@
   "title": "Timebomb.lol game library",
   "games": [
     {
-      "name": "Call Of Duty: World At War Zombies",
+      "name": "Call Of Duty: Black Ops Zombies",
       "image": "https://preview.redd.it/what-are-your-opinions-on-waw-zombies-and-do-you-feel-that-v0-zbeadldlqun81.jpg?width=619&format=pjpg&auto=webp&s=363a1c6bd510575a90253f74946fb437e0bf1a1a",
       "playUrl": "https://vel.gg/bo1z",
-      "description": "Play World At War Nacht der Untoten online for free.",
-      "openInNewTab": true
+      "description": "Play COD BO1 Zombies online for free.",
+      "openInNewTab": true,
+      "warning": "Playing through embed is not supported, game will open in a new tab."
     },
     {
       "image": "https://i.ytimg.com/vi/jwCKCu3I8tk/maxresdefault.jpg",
