@@ -38,19 +38,21 @@
       "image": "https://m.media-amazon.com/images/I/71Pib7x9NbL.jpg",
       "playUrl": "https://irv77.github.io/hd_fnaf/3/",
       "name": "Five Night's At Freddy's 3",
-      "description": "FNAF 3 completely ported to browser."
+      "description": "FNAF 3 completely ported to browser.",
+      "warning": "Plays in a shrunken 4:3 window."
     },
     {
       "image": "https://images.gamegator.net/co8efh",
       "playUrl": "https://irv77.github.io/hd_fnaf/4/",
       "name": "Five Night's At Freddy's 4",
-      "description": "FNAF 4 completely ported to browser."
+      "description": "FNAF 4 completely ported to browser.",
+      "warning": "Plays in a shrunken 4:3 window."
     },
     {
-      "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/738060/capsule_616x353.jpg?t=1512422259",
-      "playUrl": "https://irv77.github.io/hd_fnaf/ps/",
-      "name": "Five Night's At Freddy's Pizzeria Simulator",
-      "description": "FNAF Pizzeria Simulator completely ported to browser."
+      "image": "https://eu-images.contentstack.com/v3/assets/blt740a130ae3c5d529/blt21694b9374d3cb0e/6557820d38ae8e040a02feed/fortniteog.jpg",
+      "playUrl": "https://fortniteog.lol/fortnite/",
+      "name": "Fortnite",
+      "description": "Fortnite OG online."
     }
   ]
 }
