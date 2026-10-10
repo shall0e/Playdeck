@@ -17,7 +17,8 @@
       "description": "Minecraft Java Edition 26.2, powered by Eaglercraft!",
       "proxyHosts": [
         "api.websim.com",
-        "images.websim.com"
+        "images.websim.com",
+        "websim.com"
       ]
     },
     {
@@ -66,7 +67,8 @@
       "openInNewTab": true,
       "warning": "Playing through embed is not supported, game will open in a new tab.",
       "proxyHosts": [
-        "pvzge.com"
+        "pvzge.com",
+        "storage.pvzge.com"
       ]
     },
     {
