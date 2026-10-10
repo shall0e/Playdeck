@@ -25,7 +25,10 @@
       "image": "https://static0.gamerantimages.com/wordpress/wp-content/uploads/Skate-3-Review1.jpg?w=1200&h=628&fit=crop",
       "playUrl": "https://skate.aaddpp.lol/",
       "name": "Skate 3",
-      "description": "Find your next line in this unofficial browser skateboarding game."
+      "description": "Find your next line in this unofficial browser skateboarding game.",
+      "proxyHosts": [
+        "gamedata.xposed.wtf"
+      ]
     },
     {
       "image": "https://enemyslime.com/wp-content/uploads/2014/08/thatfuckingbear.jpg",
