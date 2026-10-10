@@ -52,7 +52,9 @@
       "image": "https://eu-images.contentstack.com/v3/assets/blt740a130ae3c5d529/blt21694b9374d3cb0e/6557820d38ae8e040a02feed/fortniteog.jpg",
       "playUrl": "https://fortniteog.lol/fortnite/",
       "name": "Fortnite",
-      "description": "Fortnite OG online."
+      "description": "Fortnite OG online.",
+      "openInNewTab": true,
+      "warning": "Playing through embed is not supported, game will open in a new tab."
     }
   ]
 }
