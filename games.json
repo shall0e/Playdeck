@@ -61,15 +61,7 @@
       "name": "Plants vs. Zombies 2",
       "description": "Plants vs. Zombies 2: Gardenless.",
       "openInNewTab": true
-    },
-    {
-      "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/220200/page_bg_raw.jpg?t=1738037585",
-      "playUrl": "https://kerbalspaceprogram.pages.dev/",
-      "name": "Kerbal Space Program",
-      "description": "Kerbal Space Program, 32 bit / 64 bit",
-      "openInNewTab": true,
-      "noProxy": true
-    },
+    }
     {
       "name": "Bendy and the Ink Machine",
       "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/622650/header.jpg",
