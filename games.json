@@ -7,8 +7,7 @@
       "image": "https://preview.redd.it/what-are-your-opinions-on-waw-zombies-and-do-you-feel-that-v0-zbeadldlqun81.jpg?width=619&format=pjpg&auto=webp&s=363a1c6bd510575a90253f74946fb437e0bf1a1a",
       "playUrl": "https://vel.gg/bo1z",
       "description": "Play COD BO1 Zombies online for free.",
-      "openInNewTab": true,
-      "warning": "Playing through embed is not supported, game will open in a new tab."
+      "openInNewTab": true
     },
     {
       "image": "https://i.ytimg.com/vi/jwCKCu3I8tk/maxresdefault.jpg",
@@ -59,16 +58,14 @@
       "playUrl": "https://play.pvzge.com/",
       "name": "Plants vs. Zombies 2",
       "description": "Plants vs. Zombies 2: Gardenless.",
-      "openInNewTab": true,
-      "warning": "Playing through embed is not supported, game will open in a new tab."
+      "openInNewTab": true
     },
     {
       "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/220200/page_bg_raw.jpg?t=1738037585",
       "playUrl": "https://kerbalspaceprogram.pages.dev/",
       "name": "Kerbal Space Program",
       "description": "Kerbal Space Program, 32 bit / 64 bit",
-      "openInNewTab": true,
-      "warning": "Playing through embed is not supported, game will open in a new tab."
+      "openInNewTab": true
     }
   ]
 }
