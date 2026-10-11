@@ -97,6 +97,12 @@
       "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1206560/header.jpg",
       "playUrl": "https://ports.shall0e.workers.dev/worldbox/",
       "description": "Create and observe a pixel-art world in this browser port of WorldBox."
+    },
+    {
+      "name": "Grand Theft Auto V",
+      "image": "https://cdn1.epicgames.com/offer/b0cd075465c44f87be3b505ac04a2e46/EGS_GrandTheftAutoVEnhanced_RockstarNorth_S1_2560x1440-906d8ae76a91aafc60b1a54c23fab496",
+      "playUrl": "https://gta.deloskiyt.pl/",
+      "description": "All of GTA 5 playable in browser."
     }
   ]
 }
