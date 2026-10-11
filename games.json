@@ -40,14 +40,14 @@
       "playUrl": "https://irv77.github.io/hd_fnaf/3/",
       "name": "Five Night's At Freddy's 3",
       "description": "FNAF 3 completely ported to browser.",
-      "warning": "Plays in a shrunken 4:3 window."
+      "displayOptions": true
     },
     {
       "image": "https://images.gamegator.net/co8efh",
       "playUrl": "https://irv77.github.io/hd_fnaf/4/",
       "name": "Five Night's At Freddy's 4",
       "description": "FNAF 4 completely ported to browser.",
-      "warning": "Plays in a shrunken 4:3 window."
+      "displayOptions": true
     },
     {
       "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/738060/capsule_616x353.jpg?t=1512422259",
