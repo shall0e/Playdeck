@@ -47,6 +47,15 @@
             "type": "boolean",
             "default": false,
             "description": "Open the game in a new tab instead of the fullscreen player."
+          },
+          "warning": {
+            "type": "string",
+            "description": "Show a loading, storage, or compatibility note on the game card."
+          },
+          "noProxy": {
+            "type": "boolean",
+            "default": false,
+            "description": "Open the original host directly without the sandbox proxy or forced controller mapping."
           }
         }
       }
