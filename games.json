@@ -7,7 +7,8 @@
       "image": "https://preview.redd.it/what-are-your-opinions-on-waw-zombies-and-do-you-feel-that-v0-zbeadldlqun81.jpg?width=619&format=pjpg&auto=webp&s=363a1c6bd510575a90253f74946fb437e0bf1a1a",
       "playUrl": "https://vel.gg/bo1z",
       "description": "Play COD BO1 Zombies online for free.",
-      "openInNewTab": true
+      "openInNewTab": true,
+      "displayOptions": true
     },
     {
       "image": "https://i.ytimg.com/vi/jwCKCu3I8tk/maxresdefault.jpg",
@@ -61,7 +62,7 @@
       "name": "Plants vs. Zombies 2",
       "description": "Plants vs. Zombies 2: Gardenless.",
       "openInNewTab": true
-    }
+    },
     {
       "name": "Bendy and the Ink Machine",
       "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/622650/header.jpg",
@@ -103,8 +104,7 @@
       "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/7940/header.jpg",
       "playUrl": "https://ports.shall0e.workers.dev/cod4/",
       "description": "Play the Call of Duty 4: Modern Warfare browser port.",
-      "warning": "First launch downloads about 6.5 GiB. Use Chrome or Edge with enough free storage.",
-      "displayOptions": true
+      "warning": "First launch downloads about 6.5 GiB. Use Chrome or Edge with enough free storage."
     }
   ]
 }
