@@ -66,6 +66,36 @@
       "name": "Kerbal Space Program",
       "description": "Kerbal Space Program, 32 bit / 64 bit",
       "openInNewTab": true
+    },
+    {
+      "name": "Bendy and the Ink Machine",
+      "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/622650/header.jpg",
+      "playUrl": "https://ports.shall0e.workers.dev/bendy/",
+      "description": "Escape the abandoned animation studio in this browser port of Bendy and the Ink Machine."
+    },
+    {
+      "name": "Granny",
+      "image": "https://newsboilerstorage.blob.core.windows.net/news/2242415_1_lg.jpg",
+      "playUrl": "https://ports.shall0e.workers.dev/granny/",
+      "description": "Find a way out of Granny's house while avoiding her in this browser port."
+    },
+    {
+      "name": "People Playground",
+      "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1118200/header.jpg",
+      "playUrl": "https://ports.shall0e.workers.dev/peopleplayground/",
+      "description": "Experiment with physics, objects, and ragdolls in People Playground."
+    },
+    {
+      "name": "Slime Rancher",
+      "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/433340/header.jpg",
+      "playUrl": "https://ports.shall0e.workers.dev/slimerancher/",
+      "description": "Explore the Far, Far Range and collect slimes in this browser port."
+    },
+    {
+      "name": "WorldBox",
+      "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1206560/header.jpg",
+      "playUrl": "https://ports.shall0e.workers.dev/worldbox/",
+      "description": "Create and observe a pixel-art world in this browser port of WorldBox."
     }
   ]
 }
