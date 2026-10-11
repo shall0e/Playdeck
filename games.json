@@ -65,7 +65,8 @@
       "playUrl": "https://kerbalspaceprogram.pages.dev/",
       "name": "Kerbal Space Program",
       "description": "Kerbal Space Program, 32 bit / 64 bit",
-      "openInNewTab": true
+      "openInNewTab": true,
+      "noProxy": true
     },
     {
       "name": "Bendy and the Ink Machine",
