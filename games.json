@@ -25,13 +25,15 @@
       "image": "https://enemyslime.com/wp-content/uploads/2014/08/thatfuckingbear.jpg",
       "playUrl": "https://irv77.github.io/hd_fnaf/1/",
       "name": "Five Night's At Freddy's",
-      "description": "FNAF 1 completely ported to browser."
+      "description": "FNAF 1 completely ported to browser.",
+      "displayOptions": true
     },
     {
       "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/332800/header.jpg?t=1579635993",
       "playUrl": "https://fnaf2-playable.pages.dev/",
       "name": "Five Night's At Freddy's 2",
-      "description": "FNAF 2 completely ported to browser."
+      "description": "FNAF 2 completely ported to browser.",
+      "displayOptions": true
     },
     {
       "image": "https://m.media-amazon.com/images/I/71Pib7x9NbL.jpg",
@@ -110,7 +112,7 @@
       "playUrl": "https://ports.shall0e.workers.dev/cod4/",
       "description": "Play the Call of Duty 4: Modern Warfare browser port.",
       "warning": "First launch downloads about 6.5 GiB. Use Chrome or Edge with enough free storage.",
-      "noProxy": true
+      "displayOptions": true
     }
   ]
 }
