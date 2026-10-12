@@ -1,6 +1,6 @@
 const PREFIX='/player/games/';
 const CACHE='timebomb-local-games-v1';
-const SHELL='playdeck-local-shell-v20';
+const SHELL='playdeck-local-shell-v21';
 const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/settings.js','/player/toolbar.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
 const OLD_PREFIX='/__sandbox/games/';
 
@@ -137,7 +137,7 @@ export async function localFetch(request,event) {
   if (cached && request.method==='HEAD') return new Response(null,{status:200,headers:cached.headers});
   // Refresh launch pages/manifests online, reuse downloaded immutable assets.
   const path=new URL(request.url).pathname;
-  const needsDesktop=cached && cached.headers.get('X-Timebomb-Desktop')!=='6' && (/text\/html|text\/css|javascript|ecmascript/i.test(cached.headers.get('Content-Type') || '') || ['worker','sharedworker'].includes(request.destination));
+  const needsDesktop=cached && cached.headers.get('X-Timebomb-Desktop')!=='7' && (/text\/html|text\/css|javascript|ecmascript/i.test(cached.headers.get('Content-Type') || '') || ['worker','sharedworker'].includes(request.destination));
   const mutable=needsDesktop || Boolean(range) || request.cache==='no-store' || ['worker','sharedworker','style'].includes(request.destination) || request.mode==='navigate' || /\.(html|json|webmanifest)(\?|$)/i.test(request.url);
   if (cached && !mutable) return cached;
   try {
