@@ -1,9 +1,7 @@
 const PREFIX='/player/games/';
 const CACHE='timebomb-local-games-v1';
-const SHELL='playdeck-local-shell-v22';
+const SHELL='playdeck-local-shell-v23';
 const METADATA='playdeck-local-hashes-v1';
-export const RECHECK_MS=5*60*1000;
-const UNVERSIONED_MS=24*60*60*1000;
 const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/settings.js','/player/toolbar.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
 const OLD_PREFIX='/__sandbox/games/';
 
@@ -42,14 +40,13 @@ export async function networkFetch(request,event) {
 export function isAsset(request) {
   const url=new URL(request.url);
   return url.pathname.startsWith(PREFIX) && ['GET','HEAD'].includes(request.method) &&
-    !/(^|\/)api(\/|$)/i.test(url.pathname) && !request.headers.has('authorization') &&
-    !request.headers.has('X-KSP-Offline-Download');
+    !/(^|\/)api(\/|$)/i.test(url.pathname) && !request.headers.has('authorization');
 }
-// Limit hashing buffers, not the size of files saved to disk.
+// Retained for callers; downloads have no per-file size limit.
 export const MAX_CACHE_BYTES=8*1024*1024;
 let lastActivityNotification=0;
 export function canStore(request,response) {
-  return isAsset(request) && response.headers.get('X-Playdeck-No-Store')!=='1' && request.method==='GET' && response.status===200 && response.type!=='opaque' &&
+  return isAsset(request) && request.method==='GET' && response.status===200 && response.type!=='opaque' &&
     !response.headers.has('Content-Range') && !request.headers.has('Range');
 }
 export async function cachedRange(response,range,head=false,size=Number(response.headers.get('Content-Length') || 0)) {
@@ -111,6 +108,7 @@ export async function clearGameCache(cache,scope){
 }
 let cacheRevision=0;
 const clearHistory=[];
+const pendingSaves=new Map();
 async function inform(message) {
   if(typeof self==='undefined') return;
   for (const client of await self.clients.matchAll({type:'window'})) {
@@ -122,19 +120,13 @@ export function cacheAsset(cache,key,response,event,metadata) {
   // One reader feeds disk and the game with backpressure. Response.clone() on a
   // multi-GB stream can otherwise queue the entire slower branch in memory.
   const reader=response.body.getReader(),pipe=new TransformStream(),writer=pipe.writable.getWriter();
-  const startedAt=cacheRevision,chunks=[];
+  const startedAt=cacheRevision;
   let bytes=0,writing=true;
   const cleared=()=>clearHistory.some(entry=>entry.revision>startedAt && (!entry.scope || matchesGameCache(key,entry.scope)));
   const saving=cache.put(key,new Response(pipe.readable,{status:response.status,statusText:response.statusText,headers:response.headers})).then(async()=>{
     if(cleared()){await cache.delete(key);return;}
-    let hash=null;
-    if(bytes<=MAX_CACHE_BYTES){
-      const data=new Uint8Array(bytes);let offset=0;
-      for(const chunk of chunks){data.set(chunk,offset);offset+=chunk.byteLength;}
-      hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',data)),byte=>byte.toString(16).padStart(2,'0')).join('');
-    }
     if(metadata){
-      await metadata.put(key,Response.json({bytes,hash,checkedAt:Date.now(),savedAt:Date.now()}));
+      await metadata.put(key,Response.json({bytes}));
       if(cleared()){await cache.delete(key);await metadata.delete(key);return;}
     }
     return inform({type:'sandbox:saved'});
@@ -142,14 +134,14 @@ export function cacheAsset(cache,key,response,event,metadata) {
     writing=false;void writer.abort(error).catch(()=>{});
     return inform({type:'sandbox:storage-error',message:error.name==='QuotaExceededError'?'Browser storage is full. New files will stream until space is cleared.':'Some files could not be saved; the game will keep streaming.'});
   });
-  event.waitUntil(saving);
+  pendingSaves.set(key.url,saving);
+  event.waitUntil(saving.finally(()=>{if(pendingSaves.get(key.url)===saving)pendingSaves.delete(key.url);}));
   const body=new ReadableStream({
     async pull(controller){
       try{
         const next=await reader.read();
         if(next.done){if(writing)try{await writer.close();}catch{}controller.close();return;}
         bytes+=next.value.byteLength;
-        if(bytes<=MAX_CACHE_BYTES)chunks.push(next.value.slice());else chunks.length=0;
         if(writing)try{await writer.write(next.value);}catch{writing=false;}
         controller.enqueue(next.value);
       }catch(error){if(writing)void writer.abort(error).catch(()=>{});controller.error(error);}
@@ -158,65 +150,73 @@ export function cacheAsset(cache,key,response,event,metadata) {
   });
   return new Response(body,{status:response.status,statusText:response.statusText,headers:response.headers});
 }
+export function localKey(request,range=false){
+  const url=new URL(request.url);
+  for(const name of [...url.searchParams.keys()]){
+    if(/^(?:_+|cache[-_]?bust(?:er)?|timestamp|nocache)$/i.test(name))url.searchParams.delete(name);
+  }
+  if(range)url.searchParams.set('__playdeck_range',request.headers.get('Range'));
+  return new Request(url.href);
+}
 export async function localFetch(request,event) {
   if (!isAsset(request)) return networkFetch(request,event);
-  let cache,metadata;
-  try{[cache,metadata]=await Promise.all([caches.open(CACHE),caches.open(METADATA)]);}catch{return networkFetch(request,event);}
-  const key=new Request(request.url);
-  let cached=await cache.match(key),record,config;
-  try{record=await (await metadata.match(key))?.json();}catch{}
-  try{config=await (await metadata.match(new URL('/player/__cache-config',request.url).href))?.json();}catch{}
+  let cache;
+  try{cache=await caches.open(CACHE);}catch{return networkFetch(request,event);}
+  const key=localKey(request),range=request.headers.get('Range');
+  let cached=await cache.match(key);
+  if(!cached && pendingSaves.has(key.url)){await pendingSaves.get(key.url);cached=await cache.match(key);}
+  // Cache-busting query strings must not cause another download of a saved
+  // static file. Documents and API/manifest responses retain query semantics.
+  if(!cached && request.mode!=='navigate'){
+    // Preserve semantic queries such as asset IDs, language and level numbers.
+    for(const savedKey of await cache.keys?.(key,{ignoreSearch:true}) || []){
+      if(localKey(savedKey).url!==key.url)continue;
+      const candidate=await cache.match(savedKey);
+      if(candidate && !/html|json|xml/i.test(candidate.headers.get('Content-Type') || '') && !candidate.headers.has('X-Playdeck-Stored-Status')){cached=candidate;break;}
+    }
+  }
   if(!cached){
     const oldURL=new URL(request.url);oldURL.pathname=oldURL.pathname.replace(PREFIX,OLD_PREFIX);
     const old=await cache.match(new Request(oldURL.href));
     if(old && !/html|css|javascript|ecmascript/i.test(old.headers.get('Content-Type') || ''))cached=old;
   }
-  const range=request.headers.get('Range');
-  if (cached && range) {
-    const partial=await cachedRange(cached,range,request.method==='HEAD',record?.bytes || Number(cached.headers.get('Content-Length') || 0));
-    if (partial) return partial;
-  }
-  if (cached && request.method==='HEAD') return new Response(null,{status:200,headers:cached.headers});
-  const rewritten=cached && /text\/html|text\/css|javascript|ecmascript/i.test(cached.headers.get('Content-Type') || '');
-  const transform=cached?.headers.get('X-Playdeck-Transform')?.split(':');
-  const destination=['worker','sharedworker'].includes(request.destination)?request.destination:'asset';
-  const needsDesktop=rewritten && (cached.headers.get('X-Timebomb-Desktop')!=='7' || !transform || transform[0]!=='hash-cache-1' || (config?.performance && transform[1]!==config.performance) || transform[2]!==destination);
-  const mutable=rewritten || request.mode==='navigate' || /\.(html|json|webmanifest)(\?|$)/i.test(request.url);
-  const force=['reload','no-cache'].includes(request.cache);
-  if(cached && !range && !needsDesktop && !force && Date.now()-(record?.checkedAt || 0)<RECHECK_MS)return cached;
-  const checkedAt=cacheRevision;
-  const markChecked=async()=>{
-    if(clearHistory.some(entry=>entry.revision>checkedAt && (!entry.scope || matchesGameCache(key,entry.scope))))return;
-    await metadata.put(key,Response.json({...record,checkedAt:Date.now(),savedAt:record?.savedAt || Date.now()}));
-    if(clearHistory.some(entry=>entry.revision>checkedAt && (!entry.scope || matchesGameCache(key,entry.scope))))await metadata.delete(key);
-  };
-  try {
-    const headers=new Headers(request.headers);
-    // Validators describe the upstream bytes, including scripts rewritten by
-    // Playdeck. A 304 means the saved body can be used without downloading it.
-    if(cached && !range && !needsDesktop){
-      const etag=cached.headers.get('X-Playdeck-Source-ETag') || cached.headers.get('ETag');
-      const modified=cached.headers.get('Last-Modified'),hash=cached.headers.get('X-Playdeck-Content-Hash');
-      if(etag)headers.set('If-None-Match',etag);
-      else if(modified)headers.set('If-Modified-Since',modified);
-      if(hash)headers.set('X-Playdeck-Known-Hash',hash);
-      if(cached.headers.has('X-Playdeck-Transform'))headers.set('X-Playdeck-Transform',cached.headers.get('X-Playdeck-Transform'));
-      if(!etag && !modified && !hash && !mutable){
-        const head=await networkFetch(new Request(request,{method:'HEAD',headers,cache:'no-cache'}),event);
-        const hashHeaders=['Content-Digest','Digest','Content-MD5','X-Playdeck-Source-ETag','ETag'];
-        const validator=hashHeaders.find(name=>cached.headers.has(name) && head.headers.has(name));
-        const unchanged=head.ok && (validator?head.headers.get(validator)===cached.headers.get(validator):!force && Date.now()-(record?.savedAt || Date.now())<UNVERSIONED_MS);
-        if(unchanged){event.waitUntil(markChecked().catch(()=>{}));return cached;}
-        if(head.status>=500)return cached;
-      }
+  if(cached){
+    if(range){
+      let size=Number(cached.headers.get('Content-Length') || 0);
+      if(!size)try{size=(await (await (await caches.open(METADATA)).match(key))?.json())?.bytes || 0;}catch{}
+      const partial=await cachedRange(cached,range,request.method==='HEAD',size);
+      if(partial)return partial;
+    }else{
+      if(request.method==='HEAD')return new Response(null,{status:200,headers:cached.headers});
+      return cached;
     }
-    const response=await networkFetch(new Request(request,{headers,cache:'no-cache'}),event);
-    if(response.status===304 && cached){event.waitUntil(markChecked().catch(()=>{}));return cached;}
-    if (response.status>=500 && cached) return cached;
-    if(response.headers.get('X-Playdeck-No-Store')==='1')event.waitUntil(Promise.all([cache.delete(key),metadata.delete(key)]));
+  }
+  const rangeKey=range?localKey(request,true):null;
+  if(rangeKey){
+    if(pendingSaves.has(rangeKey.url))await pendingSaves.get(rangeKey.url);
+    const partial=await cache.match(rangeKey);
+    if(partial){
+      const headers=new Headers(partial.headers);
+      headers.set('Content-Range',headers.get('X-Playdeck-Content-Range'));
+      headers.delete('X-Playdeck-Stored-Status');headers.delete('X-Playdeck-Content-Range');
+      return new Response(request.method==='HEAD'?null:partial.body,{status:206,headers});
+    }
+  }
+  try {
+    const response=await networkFetch(request,event);
+    let metadata;try{metadata=await caches.open(METADATA);}catch{}
+    if(rangeKey && request.method==='GET' && response.status===206){
+      // CacheStorage rejects 206 entries. Store the complete requested range
+      // under its own key as 200, then restore 206 when serving it to the game.
+      const headers=new Headers(response.headers);headers.set('X-Playdeck-Stored-Status','206');
+      headers.set('X-Playdeck-Content-Range',headers.get('Content-Range'));
+      const storedHeaders=new Headers(headers);storedHeaders.delete('Content-Range');
+      const input=new Response(response.body,{status:200,headers:storedHeaders});
+      const saved=cacheAsset(cache,rangeKey,input,event,metadata);
+      return new Response(saved.body,{status:206,statusText:response.statusText,headers:response.headers});
+    }
     return cacheAsset(cache,key,response,event,metadata);
   } catch(error) {
-    if (cached) return cached;
     return new Response('This file has not been downloaded. Reconnect to import it.',{status:503,headers:{'Content-Type':'text/plain','Cross-Origin-Resource-Policy':'cross-origin'}});
   }
 }
@@ -237,6 +237,9 @@ if (typeof self!=='undefined' && self.addEventListener) {
     else if(url.pathname.startsWith('/__game/v4/')) event.respondWith(networkFetch(event.request,event));
     else if (SHELL_FILES.includes(url.pathname)) event.respondWith((async()=>{
       try {
+        const cache=await caches.open(SHELL);
+        const saved=await cache.match(url.origin+url.pathname);
+        if(saved)return saved;
         const response=await fetch(event.request);
         if (response.ok) {const copy=response.clone();event.waitUntil(caches.open(SHELL).then(cache=>cache.put(url.origin+url.pathname,copy)));}
         return response;
@@ -251,8 +254,6 @@ if (typeof self!=='undefined' && self.addEventListener) {
       const scope=gameCacheScope(sourceURL.searchParams.get('url'),sourceURL.origin);
       if (event.data?.type==='sandbox:config') {
         if(!['full','auto','fast','native'].includes(event.data.performance))throw new Error('Invalid cache configuration');
-        const metadata=await caches.open(METADATA);
-        await metadata.put(sourceURL.origin+'/player/__cache-config',Response.json({performance:event.data.performance}));
         port?.postMessage({ok:true});
       } else if (event.data?.type==='sandbox:activity') {
         port?.postMessage({ok:true,...downloads.snapshot()});

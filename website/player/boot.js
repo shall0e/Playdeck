@@ -278,7 +278,7 @@ const performanceNote=document.createElement('p');
 performanceNote.hidden=true;
 performanceNote.textContent='Full resolution uses your device’s native pixel density. Automatic lowers resolution when frame callbacks fall behind. Maximum speed starts at the smallest viewport. Original desktop compatibility restores the previous device spoofing. Changing this restarts the game; save first. Fixed-resolution engines may ignore these hints.';
 $('#panel').append(performanceNote);
-const cacheNote=document.createElement('p');cacheNote.hidden=true;cacheNote.textContent='Downloaded files are reused on this device. Hash and version checks refresh changed files automatically.';$('#panel').append(cacheNote);
+const cacheNote=document.createElement('p');cacheNote.hidden=true;cacheNote.textContent='Saved files load directly from this device. Only missing files download. Clear this game’s downloads to fetch an updated copy.';$('#panel').append(cacheNote);
 document.body.classList.toggle('performance-active',performanceMode!=='native');
 // Unified chrome remains blurred; the small toolbar is hidden during normal gameplay.
 const cadenceNote=document.createElement('p');cadenceNote.textContent=performanceMode==='full'?'Full resolution · native pixel density':performanceMode==='native'?'Frame monitoring off in compatibility mode':'Frame cadence: waiting for renderer';cadenceNote.hidden=true;$('#panel').append(cadenceNote);
@@ -570,7 +570,6 @@ async function start() {
       function changed(){if(navigator.serviceWorker.controller===worker){cleanup();resolve();}}
       navigator.serviceWorker.addEventListener('controllerchange',changed);changed();
     });
-    await send('sandbox:config',{performance:performanceMode});
   } catch(error) {
     // Third-party storage can be blocked on mobile. The server proxy still runs online.
     worker=null;

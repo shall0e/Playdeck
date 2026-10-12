@@ -20,7 +20,7 @@ test('cache saves complete game assets while APIs and admission downloads stay o
   assert.equal(isAsset(new Request(origin+prefix+'vel.gg/api/start')),false);
   assert.equal(isAsset(new Request(url,{method:'POST',body:'test'})),false);
   assert.equal(canStore(request,new Response('partial',{status:206})),false);
-  assert.equal(isAsset(new Request(url,{headers:{'X-KSP-Offline-Download':'1'}})),false);
+  assert.equal(isAsset(new Request(url,{headers:{'X-KSP-Offline-Download':'1'}})),true);
   assert.equal(isAsset(new Request(origin+'/__game/v4/vel.gg/data.bin')),false);
 });
 test('downloaded media supports bounded and suffix byte ranges offline',async()=>{
@@ -76,11 +76,11 @@ test('sandbox player and worker are routed with embeddable headers',async()=>{
 });
 
 
-test('static loader no-store and large payloads are saved, upstream private responses are excluded',()=>{
+test('static no-store loaders, upstream no-store assets and large payloads are saved locally',()=>{
   const request=new Request(origin+prefix+'example.com/map.bin');
   assert.equal(canStore(request,new Response('large',{headers:{'Content-Length':String(MAX_CACHE_BYTES+1)}})),true);
   assert.equal(canStore(new Request(request,{cache:'no-store'}),new Response('small')),true);
-  assert.equal(canStore(request,new Response('private',{headers:{'X-Playdeck-No-Store':'1'}})),false);
+  assert.equal(canStore(request,new Response('asset',{headers:{'X-Playdeck-No-Store':'1'}})),true);
 });
 test('unknown-length files above 8 MB stream completely to disk and the game without cloning',async()=>{
   const request=new Request(origin+prefix+'example.com/map.bin'),waits=[];
