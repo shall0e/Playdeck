@@ -1265,7 +1265,7 @@ installSettings(
   },
   { gameURL: gameURL?.href, nativeGamepad },
 );
-installToolbar(menuBar, $('#panel'), {
+const toolbar = installToolbar(menuBar, $('#panel'), {
   getFrame: () => frame,
   alwaysVisible: launch.toolbar === 'visible',
 });
