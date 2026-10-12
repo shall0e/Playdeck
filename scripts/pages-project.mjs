@@ -15,7 +15,7 @@ if(host){
  // Resolve the existing live host instead of creating a similarly named site.
  if(!/^[a-z0-9-]+\.pages\.dev$/.test(host))throw new Error('Invalid Playdeck host');
  for(let page=1;!project;page++){
-  const data=await get(endpoint+'?per_page=100&page='+page);
+  const data=await get(endpoint+'?per_page=10&page='+page);
   project=data.result.find(value=>value.subdomain===host);
   if(page>=(data.result_info?.total_pages || 1))break;
  }
