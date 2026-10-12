@@ -27,3 +27,14 @@ test('cached binary assets survive the route rename without copying the cache',a
   assert.equal(matchesGameCache(old,gameCacheScope('https://game.example/','https://player.example')),true);
  }finally{globalThis.caches=previousCaches;globalThis.fetch=previousFetch;}
 });
+
+test('legacy service-worker scripts update with 200 instead of an unsupported redirect',async()=>{
+ for(const prefix of ['/__sandbox','/_sandbox']){
+  let target;
+  const response=await worker.fetch(new Request('https://player.example'+prefix+'/sw.js?v=old'),{ASSETS:{fetch:async request=>{target=request.url;return new Response('current worker',{headers:{'Content-Type':'text/javascript'}});}}});
+  assert.equal(response.status,200);assert.equal(await response.text(),'current worker');
+  assert.equal(target,'https://player.example/player/sw.js?v=old');
+  assert.equal(response.headers.get('Service-Worker-Allowed'),'/');
+  assert.equal(response.headers.get('Location'),null);
+ }
+});

@@ -1,8 +1,8 @@
 const PREFIX='/player/games/';
 const CACHE='timebomb-local-games-v1';
-const SHELL='playdeck-local-shell-v24';
+const SHELL='playdeck-local-shell-v25';
 const METADATA='playdeck-local-hashes-v1';
-const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/settings.js','/player/toolbar.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
+const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/settings.js','/player/toolbar.js','/player/toolbar-icons.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
 const OLD_PREFIX='/__sandbox/games/';
 
 export class DownloadActivity {

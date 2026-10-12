@@ -210,6 +210,16 @@ export default {
   async fetch(request, env) {
     const incoming = new URL(request.url);
     const oldPlayerRoute=['/__sandbox','/_sandbox'].find(path=>incoming.pathname===path || incoming.pathname.startsWith(path+'/'));
+    // Service-worker update requests may not follow redirects. Keep previous
+    // script URLs alive so an old cached player can install the current worker.
+    if(oldPlayerRoute && incoming.pathname===oldPlayerRoute+'/sw.js'){
+      const current=new URL('/player/sw.js',incoming.origin);current.search=incoming.search;
+      const response=await env.ASSETS.fetch(new Request(current,request));
+      const headers=new Headers(response.headers);
+      headers.set('Service-Worker-Allowed','/');headers.set('Cache-Control','no-store');
+      headers.set('Cross-Origin-Resource-Policy','cross-origin');
+      return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+    }
     if(oldPlayerRoute){
       incoming.pathname='/player'+incoming.pathname.slice(oldPlayerRoute.length);
       return new Response(null,{status:308,headers:{Location:incoming.href,'Cache-Control':'no-cache','Cross-Origin-Resource-Policy':'cross-origin','Service-Worker-Allowed':'/'}});
