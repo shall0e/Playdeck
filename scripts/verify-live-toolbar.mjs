@@ -55,9 +55,9 @@ try{
  const catalogResponse=await page.request.get('https://raw.githubusercontent.com/shall0e/Playdeck/refs/heads/main/games.json');
  const catalog=await catalogResponse.json();
  const games=Array.isArray(catalog)?catalog:catalog.games;
- const game=games.find(g=>g.id && !g.disabled && !g.noProxy && !g.nativeGamepad && !g.playerOptions?.nativeGamepad);
+ const game=games.find(g=>g.name && !g.disabled && !g.noProxy && !g.nativeGamepad && !g.playerOptions?.nativeGamepad);
  assert(game,'No catalog entry suitable for controller verification');
- const gameButton=page.locator('button.game[data-play="'+game.id+'"]');
+ const gameButton=page.getByRole('button',{name:'Play '+game.name,exact:true});
  await gameButton.waitFor({state:'visible',timeout:20000});await gameButton.click();
  const frame=page.frameLocator('#stage iframe');
  await frame.locator('#game-menu-bar').waitFor({state:'attached',timeout:30000});
