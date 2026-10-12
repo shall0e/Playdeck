@@ -1,4 +1,4 @@
-import {iconMarkup} from './toolbar-icons.js?v=lucide-controls-3';
+import {iconMarkup} from './toolbar-icons.js?v=official-lucide-4';
 // Generic gamepad -> DOM input bridge. Profiles contain bindings, never game names.
 export function controllerRuntime({getFrame,readConfig,isPaused} = {}) {
   if (window.__timebombController) return;
@@ -299,7 +299,7 @@ export function installController({profileId,getFrame,forceMapping=false}) {
   function updateMappingIndicator(pad) {
     const mapped = Boolean((config.enabled || forceMapping) && pad && pad.connected !== false);
     $('#toggle').setAttribute('aria-pressed',String(mapped));
-    $('#toggle').textContent = mapped ? 'Controller \u00b7 mapped' : 'Controller';
+    $('#toggle').querySelector('span').textContent = mapped ? 'Controller \u00b7 mapped' : 'Controller';
   }
   function sync() {
     $('#enable').checked = config.enabled || forceMapping;

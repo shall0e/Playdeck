@@ -1,11 +1,11 @@
 import {readLaunchOptions} from './launch-options.js?v=standalone-1';
 import {playerViewport,fixedGameViewport} from './viewport.js?v=compact-settings-1';
 import {initialRenderBudget,reduceRenderBudget} from './performance.js?v=global-performance-1';
-import {installController} from './controller.js?v=lucide-controls-3';
+import {installController} from './controller.js?v=official-lucide-4';
 import {readSettings,readGameSettings,installSettings,matchesBind} from './settings.js?v=compact-settings-1';
 import {installToolbar} from './toolbar.js?v=compact-settings-1';
 import {displayCSS,displayMarkup,displayConfig,canvasDisplayBox} from './display.js?v=compact-settings-1';
-import {iconMarkup as toolbarIcon} from './toolbar-icons.js?v=lucide-controls-3';
+import {iconMarkup as toolbarIcon} from './toolbar-icons.js?v=official-lucide-4';
 const LOCAL='/player/games/';
 
 const params=new URLSearchParams(location.search);

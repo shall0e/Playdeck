@@ -1,3 +1,4 @@
+import {buildSync} from 'esbuild';
 import {cpSync,mkdirSync,rmSync,readdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 // Stored ZIPs need no dependencies and can be extracted by standard archive tools.
@@ -22,6 +23,11 @@ function zip(entries) {
   return Buffer.concat([...parts,table,end]);
 }
 rmSync('dist',{recursive:true,force:true});cpSync('website','dist',{recursive:true});
+buildSync({entryPoints:['website/player/toolbar-icons.js'],outfile:'dist/player/toolbar-icons.js',bundle:true,format:'esm',minify:true,target:'es2020'});
+const revision=process.env.GITHUB_SHA || 'local';
+writeFileSync('dist/player/build.json',JSON.stringify({revision}));
+const html=readFileSync('dist/player/index.html','utf8').replace('<head>','<head><meta name="playdeck-build" content="'+revision+'">');
+writeFileSync('dist/player/index.html',html);
 const source=['website','tests','scripts','.github'].flatMap(root=>files(root).map(file=>({...file,name:root+'/'+file.name})));
 for(const name of ['README.md','LICENSE','package.json','wrangler.jsonc','.gitignore'])source.push({name,data:readFileSync(name)});
 const deployment=files('dist');
