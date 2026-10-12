@@ -1,16 +1,11 @@
 import {readLaunchOptions} from './launch-options.js?v=standalone-1';
 import {playerViewport,fixedGameViewport} from './viewport.js?v=compact-settings-1';
 import {initialRenderBudget,reduceRenderBudget} from './performance.js?v=global-performance-1';
-import {installController} from './controller.js?v=compact-settings-1';
+import {installController} from './controller.js?v=lucide-controls-3';
 import {readSettings,readGameSettings,installSettings,matchesBind} from './settings.js?v=compact-settings-1';
 import {installToolbar} from './toolbar.js?v=compact-settings-1';
 import {displayCSS,displayMarkup,displayConfig,canvasDisplayBox} from './display.js?v=compact-settings-1';
-const toolbarIconPaths={
-  menu:'<path d="M4 5h16"></path><path d="M4 12h16"></path><path d="M4 19h16"></path>',
-  monitor:'<rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line>',
-  settings:'<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle>'
-};
-function toolbarIcon(name){return '<svg class="lucide-icon lucide-'+name+'" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+toolbarIconPaths[name]+'</svg>';}
+import {iconMarkup as toolbarIcon} from './toolbar-icons.js?v=lucide-controls-3';
 const LOCAL='/player/games/';
 
 const params=new URLSearchParams(location.search);
@@ -28,7 +23,7 @@ const mobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) 
 let displayOptionsConfig=null;try{displayOptionsConfig=displayConfig(launch.displayOptions);}catch{}
 const hasDisplayOptions=!!displayOptionsConfig;
 let performanceMode='full';
-try {const saved=localStorage.getItem('playdeck.performance.v2');if(hasDisplayOptions && ['full','auto','fast','native'].includes(saved))performanceMode=saved;} catch {}
+try {const saved=localStorage.getItem('playdeck.performance.v2');if(['full','auto','fast','native'].includes(saved))performanceMode=saved;} catch {}
 if(launch.performance)performanceMode=launch.performance;
 const $=value=>document.querySelector(value);
 let gameURL, frame, panicBind=playerSettings.panicBind, parentOrigin=launch.parentOrigin || location.origin, worker;
@@ -76,7 +71,7 @@ try {
 } catch {gameURL=null;$('#error').hidden=false;$('#error').textContent=launchError?.message || 'This game link is invalid.';}
 
 const menuBar=document.createElement('div');menuBar.id='game-menu-bar';
-document.body.append(menuBar);menuBar.append($('#badge'));$('#badge').textContent='Settings';$('#badge').innerHTML='<svg class="lucide-icon lucide-settings" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg><span>Settings</span>';
+document.body.append(menuBar);menuBar.append($('#badge'));$('#badge').textContent='Settings';$('#badge').innerHTML=toolbarIcon('settings')+'<span>Settings</span>';
 const gameMenu=document.createElement('details');gameMenu.className='game-menu';
 gameMenu.innerHTML='<summary>'+toolbarIcon('menu')+'<span>Menu</span></summary><section class="game-menu-panel" aria-label="Game controls"><button type="button" data-action="return">Return to library</button><button type="button" data-action="reload">Reload game</button><button type="button" data-action="fullscreen">Toggle fullscreen</button><button type="button" data-action="exit">Close game</button><button type="button" data-action="cast">Cast to TV</button></section>';
 menuBar.append(gameMenu);
@@ -263,20 +258,21 @@ setInterval(()=>{if(!document.hidden && frame?.isConnected)applyDisplay();},1500
 
 
 const performanceControl=document.createElement('label');
-performanceControl.hidden=!hasDisplayOptions;
+performanceControl.id='performance-control';
 performanceControl.style.cssText='display:grid;gap:8px;margin-top:16px;font-size:13px';
-performanceControl.innerHTML='Performance<select><option value="full">Full resolution (default)</option><option value="auto">Automatic performance</option><option value="fast">Maximum speed (softer image)</option><option value="native">Original desktop compatibility</option></select>';
+performanceControl.innerHTML='Performance<select aria-label="Performance"><option value="full">Full resolution (default)</option><option value="auto">Automatic performance</option><option value="fast">Maximum speed (softer image)</option><option value="native">Native rendering</option></select>';
 performanceControl.querySelector('select').value=performanceMode;
 performanceControl.querySelector('select').onchange=event=>{
-  if(!hasDisplayOptions)return;
   performanceMode=event.target.value;
   try {localStorage.setItem('playdeck.performance.v2',performanceMode);} catch {}
-  location.reload();
+  const nextURL=new URL(location.href);
+  nextURL.searchParams.set('performance',performanceMode);
+  location.replace(nextURL.href);
 };
 $('#panel').append(performanceControl);
 const performanceNote=document.createElement('p');
 performanceNote.hidden=true;
-performanceNote.textContent='Full resolution uses your device’s native pixel density. Automatic lowers resolution when frame callbacks fall behind. Maximum speed starts at the smallest viewport. Original desktop compatibility restores the previous device spoofing. Changing this restarts the game; save first. Fixed-resolution engines may ignore these hints.';
+performanceNote.textContent='Full resolution uses your device’s native pixel density. Automatic lowers resolution when frame callbacks fall behind. Maximum speed starts at the smallest viewport. Native rendering leaves graphics settings unchanged. Changing this restarts the game; save first. Fixed-resolution engines may ignore these hints.';
 $('#panel').append(performanceNote);
 const cacheNote=document.createElement('p');cacheNote.hidden=true;cacheNote.textContent='Saved files load directly from this device. Only missing files download. Clear this game’s downloads to fetch an updated copy.';$('#panel').append(cacheNote);
 document.body.classList.toggle('performance-active',performanceMode!=='native');
@@ -409,7 +405,7 @@ let statsTimer,statsLast=0;
 function refreshStats() {
   clearTimeout(statsTimer);
   statsTimer=setTimeout(async()=>{
-    try {const stats=await send('sandbox:stats');statsLast=Date.now();$('#files').textContent=`${stats.files} downloaded files`;$('#badge').textContent='Settings';$('#badge').innerHTML='<svg class="lucide-icon lucide-settings" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg><span>Settings</span>';$('#clear-game').disabled=!gameURL || !worker || stats.gameFiles===0;} catch {}
+    try {const stats=await send('sandbox:stats');statsLast=Date.now();$('#files').textContent=`${stats.files} downloaded files`;$('#badge').textContent='Settings';$('#badge').innerHTML=toolbarIcon('settings')+'<span>Settings</span>';$('#clear-game').disabled=!gameURL || !worker || stats.gameFiles===0;} catch {}
   },gameReady && $('#panel').hidden ? Math.max(500,5000-(Date.now()-statsLast)) : 500);
 }
 function configChild() {if (panicBind && frame) frame.contentWindow.postMessage({type:'playdeck:panic-config',bind:panicBind},location.origin);}
@@ -451,7 +447,7 @@ function watchGameLifecycle(){
 const mouseGuardDocs=new WeakSet();
 let mouseLockTarget=null,mouseLockDocument=null;
 const relockButton=document.createElement('button');
-relockButton.type='button';relockButton.textContent='Lock mouse';relockButton.hidden=true;
+relockButton.id='mouse-relock';relockButton.type='button';relockButton.textContent='Lock mouse';relockButton.hidden=true;
 relockButton.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483646;border:0;border-radius:10px;background:rgba(25,28,25,.68);backdrop-filter:blur(14px);color:#e0e4dc;font:12px system-ui;padding:9px 13px';
 document.body.append(relockButton);
 function updateMouseLock(){
@@ -574,7 +570,7 @@ async function start() {
     // Third-party storage can be blocked on mobile. The server proxy still runs online.
     worker=null;
     $('#storage-note').textContent='Browser storage is unavailable. This game is running online without offline downloads.';
-    $('#files').textContent='Online mode';$('#badge').textContent='Settings';$('#badge').innerHTML='<svg class="lucide-icon lucide-settings" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg><span>Settings</span>';$('#clear').disabled=true;$('#clear-game').disabled=true;
+    $('#files').textContent='Online mode';$('#badge').textContent='Settings';$('#badge').innerHTML=toolbarIcon('settings')+'<span>Settings</span>';$('#clear').disabled=true;$('#clear-game').disabled=true;
   }
   // Let the game's own document load its dependencies once, in the correct order.
   mount(gamePath(LOCAL));if(worker)refreshStats();

@@ -1,3 +1,4 @@
+import {iconMarkup} from './toolbar-icons.js?v=lucide-controls-3';
 // Generic gamepad -> DOM input bridge. Profiles contain bindings, never game names.
 export function controllerRuntime({getFrame,readConfig,isPaused} = {}) {
   if (window.__timebombController) return;
@@ -249,6 +250,7 @@ export function installController({profileId,getFrame,forceMapping=false}) {
     button,input,select{border:0;border-radius:10px;background:rgba(110,120,106,.19);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:9px 14px;font-size:13px}
     button{cursor:pointer;transition:background .18s}button:hover,button:focus-visible{background:rgba(140,150,136,.3)}
     input:focus-visible,select:focus-visible{outline:2px solid #bdc3b9;outline-offset:2px}button:focus-visible{outline:0}
+    #toggle,#restore{display:flex;align-items:center;justify-content:center;gap:6px} .lucide-icon{display:block;flex:0 0 16px;width:16px;height:16px} button[hidden]{display:none!important}
     #toggle{opacity:1;border:0;outline:0;background:rgba(25,28,25,.58);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 4px 18px #0003;color:#e0e4dc;padding:9px 13px;border-radius:10px;font-size:12px;min-height:34px;white-space:nowrap;transition:background .18s}
     #toggle:hover,#toggle:focus-visible{background:rgba(45,49,43,.72)}#toggle[aria-pressed=true]{color:#e8c658}
     @media(pointer:coarse){#toggle{min-height:44px}}
@@ -272,7 +274,7 @@ export function installController({profileId,getFrame,forceMapping=false}) {
     @media(max-width:420px){#toggle{padding-inline:10px}}
     #toggle{height:var(--player-height,34px);min-height:var(--player-height,34px);padding:0 10px;border-radius:9px;font-size:11px}
     #panel{bottom:calc(var(--player-height,34px) + 8px);width:min(300px,calc(100vw - 20px));padding:16px;border-radius:12px}
-  </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">Controller</button>
+  </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
   <section id="panel" hidden aria-label="Controller settings"><header><h2>Controller mapping</h2></header>
   <p id="status" role="status">Connect a controller and press a button.</p>
   <div class="row"><label for="pad">Controller</label><select id="pad"><option value="auto">First connected</option></select></div>
@@ -289,7 +291,7 @@ export function installController({profileId,getFrame,forceMapping=false}) {
   <label><input id="link-aim" type="checkbox" checked> Link X and Y sensitivity</label>
   <label><input id="look" type="checkbox"> Stick controls mouse aiming</label><div class="axis"><label>Horizontal axis<select id="lookx"></select></label><label>Vertical axis<select id="looky"></select></label></div><label><input id="invert" type="checkbox"> Invert vertical aiming</label>
   <p>Click a key field and press a key, or choose a mouse button. Delete clears a binding. Inputs light up as you use them.</p><div id="bindings"></div></div></details>
-  <div class="restore-row"><button id="restore" type="button">Restore defaults</button></div>
+  <div class="restore-row"><button id="restore" type="button">${iconMarkup('rotate-ccw')}<span>Restore defaults</span></button></div>
   </fieldset>
   <p class="note">Compatibility depends on the game accepting simulated inputs. This does not add aim assist or native analog movement.</p></section>`;
   const $ = selector => root.querySelector(selector);

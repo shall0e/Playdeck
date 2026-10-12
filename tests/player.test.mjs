@@ -1,3 +1,4 @@
+import {iconMarkup as toolbarIcon} from '../website/player/toolbar-icons.js';
 import {playerViewport,fixedGameViewport} from '../website/player/viewport.js';
 import {initialRenderBudget,reduceRenderBudget} from '../website/player/performance.js';
 import test from 'node:test';
@@ -11,7 +12,7 @@ test('blocked mobile storage still mounts the game through the online proxy',asy
   const start=boot.slice(boot.indexOf('async function start()'),boot.indexOf("\ninstallSettings($('#panel')"));
   for(const serviceWorker of [undefined,{getRegistrations:async()=>{throw new Error('Storage blocked');}}]){
     const elements=new Map();const calls=[];
-    const context={gameURL:{},navigator:{serviceWorker},window:{caches:{}},worker:undefined,
+    const context={toolbarIcon,gameURL:{},navigator:{serviceWorker},window:{caches:{}},worker:undefined,
       location:{origin:'https://playdeck-1z1.pages.dev'},LOCAL:'/player/games/',
       $:id=>{if(!elements.has(id))elements.set(id,{});return elements.get(id);},
       gamePath:prefix=>prefix+'game.example/',mount:url=>calls.push(url),refreshStats:()=>calls.push('stats')};

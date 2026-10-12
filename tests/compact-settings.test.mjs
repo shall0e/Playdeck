@@ -26,10 +26,11 @@ test('Settings auto-save and native controller games bypass the mapper entirely'
  assert.ok(boot.includes("gameURL && !nativeGamepad ? installController"));
  assert.ok(boot.includes("launch.displayOptions"));assert.ok(!boot.includes("params.get('display')"));
 });
-test('unmarked games cannot inherit reduced-resolution preferences',()=>{
+test('performance settings are available independently of canvas display options',()=>{
  const boot=readFileSync(new URL('../website/player/boot.js',import.meta.url),'utf8');
- assert.ok(boot.includes("if(hasDisplayOptions && ['full','auto','fast','native'].includes(saved))"));
- assert.ok(boot.includes('performanceControl.hidden=!hasDisplayOptions'));
- assert.ok(boot.includes('if(!hasDisplayOptions)return;'));
+ assert.ok(boot.includes("if(['full','auto','fast','native'].includes(saved))"));
+ assert.ok(boot.includes("performanceControl.id='performance-control'"));
+ assert.ok(!boot.includes('performanceControl.hidden=!hasDisplayOptions'));
+ assert.ok(boot.includes("nextURL.searchParams.set('performance',performanceMode)"));
 });
 
