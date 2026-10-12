@@ -33,6 +33,7 @@ test('blocked mobile storage still mounts the game through the online proxy', as
     const context = {
       toolbarIcon,
       gameURL: {},
+      deck: { preflight: async () => { calls.push('preflight'); return true; } },
       navigator: { serviceWorker },
       window: { caches: {} },
       worker: undefined,
@@ -49,7 +50,7 @@ test('blocked mobile storage still mounts the game through the online proxy', as
     vm.createContext(context);
     vm.runInContext(start, context);
     await context.start();
-    assert.deepEqual(calls, ['/player/games/game.example/']);
+    assert.deepEqual(calls, ['preflight', '/player/games/game.example/']);
     assert.equal(elements.get('#clear').disabled, true);
   }
 });
