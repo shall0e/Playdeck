@@ -1,14 +1,14 @@
 import {gameId,compatibilityDefaults} from './session.js';
 import {displayConfig} from './display.js';
 const KEY='playdeck.profiles.v1';
-export const profileDefaults={performance:'full',compatibility:compatibilityDefaults,hidePageExtras:true,muted:false,keepAwake:false,pauseBackground:true,controllerNavigation:true,touch:false,touchOpacity:0.65,touchSize:60,touchSide:'left',touchBindings:['Space','KeyE','KeyR','ShiftLeft'],touchLayout:null,showDiagnostics:false};
+export const profileDefaults={performance:'full',compatibility:compatibilityDefaults,hidePageExtras:true,muted:false,keepAwake:false,pauseBackground:true,muteBackground:false,controllerNavigation:true,touch:false,touchOpacity:0.65,touchSize:60,touchSide:'left',touchBindings:['Space','KeyE','KeyR','ShiftLeft'],touchLayout:null,showDiagnostics:false};
 export function validateProfile(value={}) {
   const modes=['full','auto','fast','native'];
   if(value.performance!==undefined && !modes.includes(value.performance))throw new Error('Invalid performance mode');
   const compatibility={...compatibilityDefaults};for(const key of Object.keys(compatibility))if(value.compatibility?.[key]!==undefined){if(typeof value.compatibility[key]!=='boolean')throw new Error('Invalid compatibility setting');compatibility[key]=value.compatibility[key];}
   compatibility.identity=false;
   const next={...profileDefaults,compatibility,performance:value.performance || 'full'};
-  for(const key of ['hidePageExtras','muted','keepAwake','pauseBackground','controllerNavigation','touch','showDiagnostics'])if(typeof value[key]==='boolean')next[key]=value[key];
+  for(const key of ['hidePageExtras','muted','keepAwake','pauseBackground','muteBackground','controllerNavigation','touch','showDiagnostics'])if(typeof value[key]==='boolean')next[key]=value[key];
   next.touchOpacity=Math.max(.15,Math.min(1,Number(value.touchOpacity) || .65));next.touchSize=Math.max(40,Math.min(100,Number(value.touchSize) || 60));next.touchSide=value.touchSide==='right'?'right':'left';
   if(Array.isArray(value.touchBindings) && value.touchBindings.length===4 && value.touchBindings.every(key=>typeof key==='string' && /^(Key[A-Z]|Digit[0-9]|Space|ShiftLeft|ControlLeft|Arrow(?:Up|Down|Left|Right))$/.test(key)))next.touchBindings=value.touchBindings;
   if(value.touchLayout && typeof value.touchLayout==='object'){next.touchLayout={};for(const key of ['stick','aim','a','b','x','y']){const position=value.touchLayout[key];if(position && Number.isFinite(position.x) && Number.isFinite(position.y))next.touchLayout[key]={x:Math.max(0,Math.min(1,position.x)),y:Math.max(0,Math.min(1,position.y))};}}

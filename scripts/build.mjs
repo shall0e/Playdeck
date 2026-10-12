@@ -62,7 +62,8 @@ buildSync({
   target: 'es2020',
 });
 const revision = process.env.GITHUB_SHA || 'local';
-writeFileSync('dist/player/build.json', JSON.stringify({ revision }));
+writeFileSync('dist/player/build.json', JSON.stringify({ revision, compatibility:'deck-runtime-1', features:'deck-2' }));
+writeFileSync('dist/player/version.js',readFileSync('website/player/version.js','utf8').replace("BUILD_REVISION='local'","BUILD_REVISION="+JSON.stringify(revision)));
 const html = readFileSync('dist/player/index.html', 'utf8').replace(
   '<head>',
   '<head><meta name="playdeck-build" content="' + revision + '">',
@@ -82,3 +83,4 @@ mkdirSync('dist/downloads', { recursive: true });
 writeFileSync('dist/downloads/playdeck-source.zip', zip(source));
 writeFileSync('dist/downloads/playdeck-deploy.zip', zip(deployment));
 console.log('Built standalone Playdeck and downloadable source/deployment bundles.');
+

@@ -831,7 +831,7 @@ function send(type, data = {}) {
       channel.port1.close();
       event.data.ok ? resolve(event.data) : reject(new Error(event.data.error));
     };
-    (navigator.serviceWorker.controller || worker).postMessage({ type, session:launchSession?.id,game:launchSession?.game,performance:performanceMode,...data }, [channel.port2]);
+    (navigator.serviceWorker.controller || worker).postMessage({ type, session:launchSession?.id,game:launchSession?.game,performance:performanceMode,keepDownloaded:!!(gameURL && profiles()[gameId(gameURL.href)]?.downloadPinned),...data }, [channel.port2]);
   });
 }
 let statsTimer,
@@ -1266,6 +1266,7 @@ async function start() {
   }
   // Let the game's own document load its dependencies once, in the correct order.
   if(worker)try{await send('sandbox:config');}catch{}
+  if(deck && !(await deck.preflight()))return;
   mount(gamePath(LOCAL));
   if (worker) refreshStats();
 }

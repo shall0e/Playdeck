@@ -1,12 +1,13 @@
+import {BUILD_REVISION,FEATURE_RELEASE} from './version.js';
 import {canonicalGameURL,proxyContext} from './session.js';
 import {staticResponse,routeCachedResponse} from './cache-policy.js';
 import {partialWriter,resumeDownload,clearPartial,clearAllPartials} from './download-store.js';
 const PREFIX='/player/games/';
 const CACHE='timebomb-local-games-v1';
-const SHELL='playdeck-local-shell-v31';
+const SHELL='playdeck-local-shell-v32';
 const METADATA='playdeck-local-hashes-v1';
 const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/settings.js','/player/toolbar.js','/player/toolbar-icons.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
-SHELL_FILES.push('/player/cookies.js','/player/session.js','/player/options.js','/player/game-runtime.js','/player/proxy-core.js','/player/rewrite.js','/player/vendor/acorn.js','/player/cache-policy.js','/player/download-store.js','/player/deck.js','/player/deck.css','/player/profiles.js','/player/saves.js','/player/touch.js','/player/capture.js','/player/packages.js','/player/manifest.webmanifest','/player/icon.svg','/player/build.json');
+SHELL_FILES.push('/player/version.js','/player/feature-tools.js','/player/cookies.js','/player/session.js','/player/options.js','/player/game-runtime.js','/player/proxy-core.js','/player/rewrite.js','/player/vendor/acorn.js','/player/cache-policy.js','/player/download-store.js','/player/deck.js','/player/deck.css','/player/profiles.js','/player/saves.js','/player/touch.js','/player/capture.js','/player/packages.js','/player/manifest.webmanifest','/player/icon.svg','/player/build.json');
 const OLD_PREFIX='/__sandbox/games/';
 
 export class DownloadActivity {
@@ -139,7 +140,7 @@ export function cacheAsset(cache,key,response,event,metadata) {
     if(cleared()){await cache.delete(key);return;}
     if(metadata){
       const previous=metadataWrites.get(key.url) || Promise.resolve();
-      const write=previous.catch(()=>{}).then(async()=>{let saved={};try{saved=await (await metadata.match(key))?.json() || {};}catch{}const owner=event.playdeckOwner;await metadata.put(key,Response.json({...saved,bytes,owners:[...new Set([...(saved.owners || []),...(owner?[owner]:[])])],savedAt:Date.now()}));});
+      const write=previous.catch(()=>{}).then(async()=>{let saved={};try{saved=await (await metadata.match(key))?.json() || {};}catch{}const owner=event.playdeckOwner;await metadata.put(key,Response.json({...saved,bytes,owners:[...new Set([...(saved.owners || []),...(owner?[owner]:[])])],pinnedOwners:[...new Set([...(saved.pinnedOwners || []),...(event.playdeckPinned && owner?[owner]:[])])],savedAt:Date.now()}));});
       metadataWrites.set(key.url,write);await write;if(metadataWrites.get(key.url)===write)metadataWrites.delete(key.url);
       if(cleared()){await cache.delete(key);await metadata.delete(key);return;}
     }
@@ -192,7 +193,7 @@ export async function localFetch(request,eventOriginal) {
   try{return await fetchLocal(request,event);}finally{if(event.playdeckFinish){const finish=event.playdeckFinish;event.playdeckFinish=null;event.waitUntil((pendingSaves.get(key.url) || Promise.resolve()).finally(finish));}}
 }
 export async function fetchLocal(request,event) {
-  const context=proxyContext(new URL(request.url).pathname);event.playdeckSession=context.session;event.playdeckOwner=context.game;
+  const context=proxyContext(new URL(request.url).pathname);event.playdeckSession=context.session;event.playdeckOwner=context.game;event.playdeckPinned=!!sessionOptions.get(context.session)?.pinned;
   const forceNetwork=request.headers.get('X-Playdeck-Update')==='1' || sessionOptions.get(context.session)?.online;
   if (!isAsset(request)) return networkFetch(request,event);
   let cache;
@@ -305,15 +306,16 @@ if (typeof self!=='undefined' && self.addEventListener) {
       const sourceURL=new URL(event.source.url);
       if(event.data?.session)clientSessions.set(event.source.id,{session:event.data.session,game:event.data.game});
       const scope=gameCacheScope(sourceURL.searchParams.get('url'),sourceURL.origin);
-      if (event.data?.type==='sandbox:config') {
+      if(event.data?.type==='sandbox:version'){port?.postMessage({ok:true,revision:BUILD_REVISION,features:FEATURE_RELEASE,compatibility:'deck-runtime-1',shell:SHELL});
+      } else if (event.data?.type==='sandbox:config') {
         if(!['full','auto','fast','native'].includes(event.data.performance))throw new Error('Invalid cache configuration');
-        if(event.data.session)sessionOptions.set(event.data.session,{online:!!event.data.online});
+        if(event.data.session)sessionOptions.set(event.data.session,{online:!!event.data.online,pinned:!!event.data.keepDownloaded});
         port?.postMessage({ok:true});
       } else if (event.data?.type==='sandbox:activity') {
         const activity=sessions.get(event.data.session) || downloads;port?.postMessage({ok:true,...activity.snapshot(),received:activity.received || 0,url:activity.url});
       } else if (event.data?.type==='sandbox:clear') {
         clearHistory.push({revision:++cacheRevision,scope:null});
-        await Promise.all([caches.delete(CACHE),caches.delete(METADATA),clearAllPartials()]);
+        const cache=await caches.open(CACHE),metadata=await caches.open(METADATA);for(const key of await cache.keys()){let info;try{info=await (await metadata.match(key))?.json();}catch{}if(info?.pinnedOwners?.length)continue;await cache.delete(key);await metadata.delete(key);}await clearAllPartials();
         port?.postMessage({ok:true,files:0});
       } else if(event.data?.type==='sandbox:clear-game'){
         if(!scope)throw new Error('Invalid game scope');
@@ -328,6 +330,8 @@ if (typeof self!=='undefined' && self.addEventListener) {
       } else if(event.data?.type==='sandbox:library'){
         const cache=await caches.open(CACHE),metadata=await caches.open(METADATA),files=[];
         for(const key of await cache.keys()){let info={};try{info=await (await metadata.match(key))?.json() || {};}catch{}files.push({url:key.url,...info});}port?.postMessage({ok:true,files});
+      } else if(event.data?.type==='sandbox:pin-owner'){
+        const owner=event.data.owner;if(!/^[a-z0-9]+$/.test(owner || ''))throw new Error('Invalid game identifier');for(const [session,options] of sessionOptions)if(clientSessions.get(event.source.id)?.session===session)options.pinned=!!event.data.pinned;const metadata=await caches.open(METADATA);for(const key of await metadata.keys()){let info;try{info=await (await metadata.match(key)).json();}catch{continue;}if(!info.owners?.includes(owner))continue;const pinned=new Set(info.pinnedOwners || []);event.data.pinned?pinned.add(owner):pinned.delete(owner);await metadata.put(key,Response.json({...info,pinnedOwners:[...pinned]}));}port?.postMessage({ok:true});
       } else if(event.data?.type==='sandbox:remove-owner'){
         const owner=event.data.owner;if(!/^[a-z0-9]+$/.test(owner || ''))throw new Error('Invalid game identifier');
         const cache=await caches.open(CACHE),metadata=await caches.open(METADATA);let removed=0;
