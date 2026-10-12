@@ -482,6 +482,8 @@ export function installController({ profileId, getFrame, forceMapping = false })
     @media(max-width:420px){#toggle{padding-inline:10px}}
     #toggle{height:var(--player-height,34px);min-height:var(--player-height,34px);padding:0 10px;border-radius:9px;font-size:11px}
     #panel{bottom:calc(var(--player-height,34px) + 8px);width:min(300px,calc(100vw - 20px));padding:16px;border-radius:12px}
+    button,input:not([type=range]):not([type=checkbox]),select,details{border:0;outline:0;background:var(--player-glass,rgba(38,38,38,.72));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+    button:hover,summary:hover,button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:0;background:var(--player-hover,rgba(54,54,54,.82));box-shadow:inset 0 0 0 2px #ffffff18}
   </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
   <section id="panel" hidden aria-label="Controller settings"><header><h2>Controller mapping</h2></header>
   <p id="status" role="status">Connect a controller and press a button.</p>
@@ -758,19 +760,9 @@ export function installController({ profileId, getFrame, forceMapping = false })
     readConfig: () => ({ ...config, enabled: (config.enabled || forceMapping) && !open }),
     isPaused: () => paused,
   });
-  const calibration=document.createElement('details');
-  calibration.innerHTML='<summary>Calibration and presets</summary><div style="padding:0 12px 12px"><label>Movement deadzone<input data-move type="range" min=".05" max=".8" step=".01"></label><label>Look deadzone<input data-look type="range" min=".05" max=".8" step=".01"></label><label>Response curve<select data-curve><option value="1">Linear</option><option value="1.5">Standard</option><option value="2.5">Precision</option></select></label><button type="button" data-calibrate>Calibrate stick rest</button><p data-axes role="status"></p><label>Preset<select data-preset><option value="">Choose preset</option><option value="fps">Keyboard movement + mouse look</option><option value="platform">Arrow keys + jump</option><option value="cursor">Menu cursor</option></select></label><button type="button" data-store-preset>Save reusable preset</button><label>Saved presets<select data-saved-preset><option value="">Choose saved preset</option></select></label></div>';
-  root.querySelector('#panel').append(calibration);
-  for(const [selector,key]of [['[data-move]','moveDeadzone'],['[data-look]','lookDeadzone'],['[data-curve]','responseCurve']]){const field=calibration.querySelector(selector);field.value=config[key] ?? (key==='responseCurve'?1.5:config.deadzone);field.oninput=()=>{config[key]=Number(field.value);save();};}
-  const activePad=()=>Array.from(navigator.getGamepads?.() || []).find(pad=>pad?.connected && (config.pad==='auto' || String(pad.index)===config.pad));
-  calibration.querySelector('[data-calibrate]').onclick=async()=>{const status=calibration.querySelector('[data-axes]');status.textContent='Leave both sticks centered for one second.';let maximum=0;for(let sample=0;sample<30;sample++){const pad=activePad();if(!pad){status.textContent='Connect a controller first.';return;}maximum=Math.max(maximum,...pad.axes.slice(0,4).map(Math.abs));await new Promise(resolve=>setTimeout(resolve,35));}config.moveDeadzone=config.lookDeadzone=Math.min(.8,Math.max(.05,maximum+.03));calibration.querySelector('[data-move]').value=config.moveDeadzone;calibration.querySelector('[data-look]').value=config.lookDeadzone;save();status.textContent='Rest deadzone: '+config.moveDeadzone.toFixed(2);};
-  calibration.querySelector('[data-preset]').onchange=event=>{const preset=event.target.value;if(!preset)return;const defaults=controllerDefaults();config={...defaults,enabled:true,pad:config.pad};if(preset==='platform'){config.look.enabled=false;config.bindings={'axis:0:-1':{kind:'key',code:'ArrowLeft'},'axis:0:1':{kind:'key',code:'ArrowRight'},'axis:1:-1':{kind:'key',code:'ArrowUp'},'axis:1:1':{kind:'key',code:'ArrowDown'},'button:0':{kind:'key',code:'Space'}};}if(preset==='cursor'){config.look={enabled:true,cursor:true,x:0,y:1};config.bindings={'button:0':{kind:'mouse',button:0},'button:1':{kind:'mouse',button:2}};}save();renderBindings();};
-  function savedPresets(){try{return JSON.parse(localStorage.getItem('playdeck.controller-presets.v1') || '{}');}catch{return {};}}
-  function listPresets(){const select=calibration.querySelector('[data-saved-preset]');select.replaceChildren();const empty=document.createElement('option');empty.value='';empty.textContent='Choose saved preset';select.append(empty);for(const name of Object.keys(savedPresets())){const option=document.createElement('option');option.value=name;option.textContent=name;select.append(option);}}
-  calibration.querySelector('[data-store-preset]').onclick=()=>{const all=savedPresets(),name='Preset '+new Date().toLocaleString();all[name]=config;try{localStorage.setItem('playdeck.controller-presets.v1',JSON.stringify(all));listPresets();}catch{calibration.querySelector('[data-axes]').textContent='Browser storage is unavailable.';}};
-  calibration.querySelector('[data-saved-preset]').onchange=event=>{const saved=savedPresets()[event.target.value];if(saved?.bindings && saved.look){config={...controllerDefaults(),...saved,pad:config.pad};save();renderBindings();}};listPresets();
-  const axisTimer=setInterval(()=>{if(calibration.open){const pad=activePad();calibration.querySelector('[data-axes]').textContent=pad?'Axes: '+pad.axes.map(value=>value.toFixed(2)).join(' · '):'Connect a controller.';}},250);
-  window.addEventListener('pagehide',()=>clearInterval(axisTimer),{once:true});
+  const curveLabel=document.createElement('label');curveLabel.innerHTML='Response curve<select data-curve><option value="1">Linear</option><option value="1.5">Standard</option><option value="2.5">Precision</option></select>';
+  root.querySelector('#keybind-options .binding-options').append(curveLabel);
+  const curve=curveLabel.querySelector('select');curve.value=config.responseCurve ?? 1.5;curve.onchange=()=>{config.responseCurve=Number(curve.value);save();};
   renderBindings();
   sync();
   refresh();
