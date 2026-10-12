@@ -1,7 +1,7 @@
 import { PERFORMANCE_MODES } from './options.js';
 const PREFIX = '/player/games/';
 const CACHE = 'timebomb-local-games-v1';
-const SHELL = 'playdeck-local-shell-v28';
+const SHELL = 'playdeck-local-shell-v29';
 const METADATA = 'playdeck-local-hashes-v1';
 const SHELL_FILES = [
   '/',
@@ -360,6 +360,12 @@ export async function localFetch(request, event) {
     await pendingSaves.get(key.url);
     cached = await cache.match(key);
   }
+  // Portable identity rewrites are incompatible with native browser location.
+  // Discard only those old transformed pages/scripts, retaining raw game assets.
+  if (cached?.headers.get('X-Playdeck-Transform')?.startsWith('hash-cache-1:')) {
+    await cache.delete(key);
+    cached = undefined;
+  }
   // Cache-busting query strings must not cause another download of a saved
   // static file. Documents and API/manifest responses retain query semantics.
   if (!cached && request.mode !== 'navigate') {
@@ -369,6 +375,7 @@ export async function localFetch(request, event) {
       const candidate = await cache.match(savedKey);
       if (
         candidate &&
+        !candidate.headers.get('X-Playdeck-Transform')?.startsWith('hash-cache-1:') &&
         !/html|json|xml/i.test(candidate.headers.get('Content-Type') || '') &&
         !candidate.headers.has('X-Playdeck-Stored-Status')
       ) {

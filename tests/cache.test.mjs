@@ -318,3 +318,29 @@ test('integrity-protected assets keep original bytes separate from rewritten dow
     assert.equal(await (await localFetch(new Request(script), event)).text(), 'rewritten script');
     assert.equal(calls.length, 1);
   }));
+
+test('removed portable rewrites refresh once while downloaded binary data stays local', async () =>
+  fixture(async ({ data, event, calls, finish, setUpstream }) => {
+    const page = origin + '/player/games/game.example/index.html';
+    await data.put(
+      page,
+      new Response('old spoofed page', {
+        headers: { 'Content-Type': 'text/html', 'X-Playdeck-Transform': 'hash-cache-1:full:asset' },
+      }),
+    );
+    await data.put(url, new Response('saved binary'));
+    setUpstream(
+      async () =>
+        new Response('native page', {
+          headers: {
+            'Content-Type': 'text/html',
+            'X-Playdeck-Transform': 'native-location-1:full:asset',
+          },
+        }),
+    );
+    assert.equal(await (await localFetch(new Request(page), event)).text(), 'native page');
+    await finish();
+    assert.equal(await (await localFetch(new Request(page), event)).text(), 'native page');
+    assert.equal(await (await localFetch(new Request(url), event)).text(), 'saved binary');
+    assert.equal(calls.length, 1);
+  }));

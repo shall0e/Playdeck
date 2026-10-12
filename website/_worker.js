@@ -5,7 +5,7 @@ import { decodeS3TC, installS3TC } from './player/s3tc.js';
 const LEGACY_PREFIX = '/__game/';
 const PREFIX = LEGACY_PREFIX + 'v4/';
 const LOCAL_PREFIX = '/player/games/';
-const ASSET_VERSION = 'hash-cache-1';
+const ASSET_VERSION = 'native-location-1';
 // Wrangler adds __name calls inside serialized functions when keeping names.
 // Supply the helper in the injected realm, isolated from the game's own bindings.
 const INJECTED_NAMES =
@@ -378,12 +378,9 @@ export function bootstrap(base, origin, worker = false, prefix = PREFIX, mode = 
       : '';
   const pointer =
     prefix === LOCAL_PREFIX ? '(' + installPointerCompatibility.toString() + ')();' : '';
-  const identity =
-    prefix === LOCAL_PREFIX ? '(' + installPageIdentity.toString() + ')(' + params + ');' : '';
   const script =
     '(()=>{' +
     INJECTED_NAMES +
-    identity +
     desktop +
     (prefix === LOCAL_PREFIX
       ? '(' +
@@ -428,55 +425,8 @@ export function rewriteCSS(text, base, origin, prefix = PREFIX, mode = 'native')
     );
 }
 
-export function rewritePageIdentity(text, prefix = PREFIX) {
-  if (prefix !== LOCAL_PREFIX) return text;
-  // Skip literals and comments. Only replace read-only URL field access, never
-  // location navigation, assignments, or the Location object itself.
-  return text.replace(
-    /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*|\/(?:\\.|[^\/\r\n\\])+\/[dgimsuvy]*|\b(?:(?:window|self|globalThis|document)\s*\.\s*)?location\s*\.\s*(href|origin|hostname|host|protocol|pathname|search|hash)\b/g,
-    (match, field, offset, source) => {
-      if (
-        !field ||
-        /[\w$.]/.test(source[offset - 1] || '') ||
-        /^\s*(?:=(?!=)|\+\+|--|[+*/%&|^-]=)/.test(source.slice(offset + match.length))
-      )
-        return match;
-      return 'globalThis.__playdeckSourceLocation.' + field;
-    },
-  );
-}
-export function installPageIdentity(base, origin, prefix) {
-  const source = (value) => {
-    try {
-      const url = new URL(value);
-      return url.origin === origin && url.pathname.startsWith(prefix)
-        ? new URL('https://' + url.pathname.slice(prefix.length) + url.search + url.hash)
-        : new URL(base);
-    } catch {
-      return new URL(base);
-    }
-  };
-  // Resolve on every read so history updates remain visible to the game.
-  Object.defineProperty(globalThis, '__playdeckSourceLocation', {
-    configurable: true,
-    get: () => source(globalThis.location?.href || base),
-  });
-  if (typeof document === 'undefined') return;
-  for (const key of ['URL', 'documentURI']) {
-    try {
-      Object.defineProperty(document, key, {
-        configurable: true,
-        get: () => globalThis.__playdeckSourceLocation.href,
-      });
-    } catch {}
-  }
-  try {
-    Object.defineProperty(document, 'referrer', { configurable: true, get: () => '' });
-  } catch {}
-}
-
 export function rewriteJS(text, base, origin, prefix = PREFIX) {
-  text = rewritePageIdentity(rewriteGameCompatibility(text, base, prefix), prefix);
+  text = rewriteGameCompatibility(text, base, prefix);
   // Only module specifiers are source URLs. Ordinary strings can be origin checks,
   // regexes, packed data or integrity-sensitive values: runtime hooks handle requests.
   return text.replace(

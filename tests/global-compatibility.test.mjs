@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import worker, { rewriteGameCompatibility } from '../website/_worker.js';
+import worker, { rewriteGameCompatibility, rewriteJS, bootstrap } from '../website/_worker.js';
 
 test('module and worker compatibility applies across arbitrary hosts and folders', () => {
   for (const base of [
@@ -59,4 +59,18 @@ test('scripts fetched as data preserve bytes for custom checksum loaders', async
   } finally {
     globalThis.fetch = previous;
   }
+});
+
+test('game scripts keep native browser location and no portable identity is injected', () => {
+  const source =
+    'const url=location.href; const origin=window.location.origin; const path=document.location.pathname;';
+  assert.equal(
+    rewriteJS(source, 'https://game.example/main.js', 'https://player.example', '/player/games/'),
+    source,
+  );
+  assert.ok(
+    !bootstrap('https://game.example/', 'https://player.example', true, '/player/games/').includes(
+      '__playdeckSourceLocation',
+    ),
+  );
 });
