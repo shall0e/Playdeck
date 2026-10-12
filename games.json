@@ -43,29 +43,10 @@
       "displayOptions": true
     },
     {
-      "image": "https://images.squarespace-cdn.com/content/v1/6983d2b9cde8d50f1d1674c7/1771395829203-3G72OQSEWG67ZGIAO2K1/PVZ2.jpg",
-      "playUrl": "https://play.pvzge.com/",
-      "name": "Plants vs. Zombies 2",
-      "description": "Plants vs. Zombies 2: Gardenless.",
-      "openInNewTab": true
-    },
-    {
       "name": "Bendy and the Ink Machine",
       "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/622650/header.jpg",
       "playUrl": "https://ports.shall0e.workers.dev/bendy/",
       "description": "Escape the abandoned animation studio in this browser port of Bendy and the Ink Machine."
-    },
-    {
-      "name": "Granny",
-      "image": "https://newsboilerstorage.blob.core.windows.net/news/2242415_1_lg.jpg",
-      "playUrl": "https://ports.shall0e.workers.dev/granny/",
-      "description": "Find a way out of Granny's house while avoiding her in this browser port."
-    },
-    {
-      "name": "People Playground",
-      "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1118200/header.jpg",
-      "playUrl": "https://ports.shall0e.workers.dev/peopleplayground/",
-      "description": "Experiment with physics, objects, and ragdolls in People Playground."
     },
     {
       "name": "Slime Rancher",
