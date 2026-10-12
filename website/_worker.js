@@ -5,7 +5,7 @@ import { decodeS3TC, installS3TC } from './player/s3tc.js';
 const LEGACY_PREFIX = '/__game/';
 const PREFIX = LEGACY_PREFIX + 'v4/';
 const LOCAL_PREFIX = '/player/games/';
-const ASSET_VERSION = 'native-location-1';
+const ASSET_VERSION = 'request-destination-1';
 // Wrangler adds __name calls inside serialized functions when keeping names.
 // Supply the helper in the injected realm, isolated from the game's own bindings.
 const INJECTED_NAMES =
@@ -634,14 +634,18 @@ export default {
         (request.headers.get('cookie') || '').match(
           /(?:^|;\s*)tb_performance=(full|auto|fast|native)(?:;|$)/,
         )?.[1] || 'full';
+      // Service-worker fetches use Sec-Fetch-Dest: empty on the network.
+      // Retain the browser's original request type when the local worker forwards it.
+      const destination =
+        request.headers.get('X-Playdeck-Destination') ||
+        request.headers.get('sec-fetch-dest') ||
+        '';
       const transform =
         ASSET_VERSION +
         ':' +
         selected +
         ':' +
-        (['worker', 'sharedworker'].includes(request.headers.get('sec-fetch-dest'))
-          ? request.headers.get('sec-fetch-dest')
-          : 'asset');
+        (['worker', 'sharedworker'].includes(destination) ? destination : 'asset');
       let response;
       // Runtime URL hooks discover dependencies as the game requests them.
       // Follow changing public HTTPS hosts without a catalog host list.
@@ -733,7 +737,7 @@ export default {
       const preserveSource =
         request.integrity ||
         request.headers.has('X-Playdeck-Integrity') ||
-        request.headers.get('sec-fetch-dest') === 'empty';
+        (/javascript|ecmascript/i.test(type) && destination === 'empty');
       if (local && rewritten && !preserveSource) headers.set('X-Playdeck-Transform', transform);
       const finish = (result) =>
         local &&
@@ -840,10 +844,7 @@ export default {
         );
       }
       let text = await clean.text();
-      if (
-        /javascript|ecmascript/i.test(type) &&
-        ['worker', 'sharedworker'].includes(request.headers.get('sec-fetch-dest'))
-      )
+      if (/javascript|ecmascript/i.test(type) && ['worker', 'sharedworker'].includes(destination))
         text = bootstrap(base, origin, true, routePrefix, selected) + '\n' + text;
       return finish(
         new Response(

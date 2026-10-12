@@ -344,3 +344,27 @@ test('removed portable rewrites refresh once while downloaded binary data stays 
     assert.equal(await (await localFetch(new Request(url), event)).text(), 'saved binary');
     assert.equal(calls.length, 1);
   }));
+
+test('raw cached launch HTML recovers automatically without redownloading game binaries', async () =>
+  fixture(async ({ data, event, calls, finish, setUpstream }) => {
+    const page = origin + '/player/games/game.example/index.html';
+    await data.put(
+      page,
+      new Response('raw broken page', { headers: { 'Content-Type': 'text/html' } }),
+    );
+    await data.put(url, new Response('saved binary'));
+    setUpstream(async (request) => {
+      assert.equal(request.headers.get('X-Playdeck-Destination'), 'empty');
+      return new Response('rewritten page', {
+        headers: {
+          'Content-Type': 'text/html',
+          'X-Playdeck-Transform': 'request-destination-1:full:asset',
+        },
+      });
+    });
+    assert.equal(await (await localFetch(new Request(page), event)).text(), 'rewritten page');
+    await finish();
+    assert.equal(await (await localFetch(new Request(page), event)).text(), 'rewritten page');
+    assert.equal(await (await localFetch(new Request(url), event)).text(), 'saved binary');
+    assert.equal(calls.length, 1);
+  }));

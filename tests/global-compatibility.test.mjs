@@ -74,3 +74,84 @@ test('game scripts keep native browser location and no portable identity is inje
     ),
   );
 });
+
+test('stylesheet requests remain rewritten when the service worker network destination is empty', async () => {
+  const previous = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    assert.equal(options.headers.get('X-Playdeck-Destination'), null);
+    return new Response('body{background:url(./texture.png)}', {
+      headers: { 'Content-Type': 'text/css' },
+    });
+  };
+  try {
+    const response = await worker.fetch(
+      new Request('https://player.example/player/games/assets.example/game/style.css', {
+        headers: { 'sec-fetch-dest': 'empty', 'X-Playdeck-Destination': 'style' },
+      }),
+      {},
+    );
+    assert.ok(
+      (await response.text()).includes(
+        'https://player.example/player/games/assets.example/game/texture.png',
+      ),
+    );
+    assert.ok(response.headers.has('X-Playdeck-Transform'));
+  } finally {
+    globalThis.fetch = previous;
+  }
+});
+
+test('HTML fetched through the local worker installs the page bootstrap instead of returning raw source', async () => {
+  const previousFetch = globalThis.fetch,
+    previousRewriter = globalThis.HTMLRewriter;
+  const selectors = [];
+  globalThis.fetch = async () =>
+    new Response('<head></head>', {
+      headers: { 'Content-Type': 'text/html', 'Last-Modified': 'test' },
+    });
+  globalThis.HTMLRewriter = class {
+    on(selector) {
+      selectors.push(selector);
+      return this;
+    }
+    transform(response) {
+      return response;
+    }
+  };
+  try {
+    const response = await worker.fetch(
+      new Request('https://player.example/player/games/game.example/', {
+        headers: { 'sec-fetch-dest': 'empty', 'X-Playdeck-Destination': 'iframe' },
+      }),
+      {},
+    );
+    assert.equal(response.status, 200);
+    assert.ok(selectors.includes('head'));
+    assert.ok(selectors.includes('*'));
+    assert.ok(response.headers.has('X-Playdeck-Transform'));
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousRewriter === undefined) delete globalThis.HTMLRewriter;
+    else globalThis.HTMLRewriter = previousRewriter;
+  }
+});
+
+test('worker bootstrap uses the forwarded original destination', async () => {
+  const previous = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response('globalThis.started=true;', {
+      headers: { 'Content-Type': 'text/javascript', 'Last-Modified': 'test' },
+    });
+  try {
+    const response = await worker.fetch(
+      new Request('https://player.example/player/games/game.example/thread.js', {
+        headers: { 'sec-fetch-dest': 'empty', 'X-Playdeck-Destination': 'worker' },
+      }),
+      {},
+    );
+    assert.ok((await response.text()).includes('installPerformance'));
+    assert.ok(response.headers.get('X-Playdeck-Transform').endsWith(':worker'));
+  } finally {
+    globalThis.fetch = previous;
+  }
+});

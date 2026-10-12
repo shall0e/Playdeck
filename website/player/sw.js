@@ -1,7 +1,7 @@
 import { PERFORMANCE_MODES } from './options.js';
 const PREFIX = '/player/games/';
 const CACHE = 'timebomb-local-games-v1';
-const SHELL = 'playdeck-local-shell-v29';
+const SHELL = 'playdeck-local-shell-v30';
 const METADATA = 'playdeck-local-hashes-v1';
 const SHELL_FILES = [
   '/',
@@ -61,6 +61,7 @@ export async function networkFetch(request, event) {
   try {
     // The proxy must leave SRI-protected bytes unchanged on every upstream.
     const headers = new Headers(request.headers);
+    headers.set('X-Playdeck-Destination', request.destination || 'empty');
     if (request.integrity) headers.set('X-Playdeck-Integrity', request.integrity);
     response = await fetch(new Request(request, { headers }));
   } catch (error) {
@@ -345,6 +346,18 @@ export function localKey(request, range = false) {
   if (range) url.searchParams.set('__playdeck_range', request.headers.get('Range'));
   return new Request(url.href);
 }
+export function needsAssetRefresh(request, response) {
+  const transform = response.headers.get('X-Playdeck-Transform');
+  const type = response.headers.get('Content-Type') || '';
+  // Refresh only rewritten source files affected by earlier proxy bugs.
+  // Raw Wasm, archives, textures, and other downloaded data remain local.
+  if (transform?.startsWith('hash-cache-1:')) return true;
+  if (/text\/html|text\/css/i.test(type) && !transform) return true;
+  if (['worker', 'sharedworker'].includes(request.destination) && !request.integrity) {
+    return !transform?.endsWith(':' + request.destination);
+  }
+  return false;
+}
 export async function localFetch(request, event) {
   if (!isAsset(request)) return networkFetch(request, event);
   let cache;
@@ -360,9 +373,7 @@ export async function localFetch(request, event) {
     await pendingSaves.get(key.url);
     cached = await cache.match(key);
   }
-  // Portable identity rewrites are incompatible with native browser location.
-  // Discard only those old transformed pages/scripts, retaining raw game assets.
-  if (cached?.headers.get('X-Playdeck-Transform')?.startsWith('hash-cache-1:')) {
+  if (cached && needsAssetRefresh(request, cached)) {
     await cache.delete(key);
     cached = undefined;
   }
@@ -375,7 +386,7 @@ export async function localFetch(request, event) {
       const candidate = await cache.match(savedKey);
       if (
         candidate &&
-        !candidate.headers.get('X-Playdeck-Transform')?.startsWith('hash-cache-1:') &&
+        !needsAssetRefresh(request, candidate) &&
         !/html|json|xml/i.test(candidate.headers.get('Content-Type') || '') &&
         !candidate.headers.has('X-Playdeck-Stored-Status')
       ) {
