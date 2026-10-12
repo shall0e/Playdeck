@@ -402,3 +402,14 @@ test('new dependency hosts and changing CDN redirects work without catalog confi
     globalThis.fetch = originalFetch;
   }
 });
+
+test('escaped root asset requests recover through the requesting game sandbox', async () => {
+  const originalFetch=globalThis.fetch, calls=[];
+  globalThis.fetch=async url=>{calls.push(String(url));return Response.json({packs:[]});};
+  try {
+    const referrer=origin+'/player/games/.launch/12345678-abcd/full/101/gameid/zombies.mdelworkstation.cc/index.html';
+    const response=await worker.fetch(new Request(origin+'/packs/zm_transit/dist/manifest.json',{headers:{referer:referrer}}),{ASSETS:{fetch(){throw Error('Game assets must not hit the Playdeck website');}}});
+    assert.deepEqual(await response.json(),{packs:[]});
+    assert.equal(calls[0],'https://zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.json');
+  } finally {globalThis.fetch=originalFetch;}
+});

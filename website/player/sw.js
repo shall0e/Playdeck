@@ -1,5 +1,5 @@
 import {BUILD_REVISION,FEATURE_RELEASE} from './version.js';
-import {canonicalGameURL,proxyContext} from './session.js';
+import {canonicalGameURL,proxyContext,recoverGameRequest} from './session.js';
 import {staticResponse,routeCachedResponse} from './cache-policy.js';
 import {partialWriter,resumeDownload,clearPartial,clearAllPartials} from './download-store.js';
 const PREFIX='/player/games/';
@@ -294,9 +294,16 @@ if (typeof self!=='undefined' && self.addEventListener) {
   self.addEventListener('fetch',event=>{
     const url=new URL(event.request.url);
     if (url.origin!==self.location.origin) return;
-    if (url.pathname.startsWith(PREFIX)) event.respondWith(localFetch(event.request,event));
-    else if(url.pathname.startsWith('/__game/v4/')) event.respondWith(networkFetch(event.request,event));
-    else if (SHELL_FILES.includes(url.pathname)) event.respondWith(shellFetch(event.request,event));
+    event.respondWith((async()=>{
+      // Native fetch references, module paths and engine loaders can bypass page hooks.
+      const client=event.clientId ? await self.clients.get(event.clientId) : null;
+      const request=recoverGameRequest(event.request,client?.url || event.request.referrer);
+      const routed=new URL(request.url);
+      if(routed.pathname.startsWith(PREFIX))return localFetch(request,event);
+      if(routed.pathname.startsWith('/__game/v4/'))return networkFetch(request,event);
+      if(SHELL_FILES.includes(routed.pathname))return shellFetch(request,event);
+      return fetch(request);
+    })());
   });
   self.addEventListener('message',event=>{
     if (!event.source || new URL(event.source.url).pathname!=='/player/') return;

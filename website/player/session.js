@@ -36,3 +36,19 @@ export function canonicalGameURL(value) {
 export function telemetryChannel(context,source) {
   return context.session ? 'playdeck-performance:'+context.session : 'timebomb-performance:'+new URL(source).origin;
 }
+
+export function recoverGameRequest(request, clientURL) {
+  try {
+    const incoming = new URL(request.url), client = new URL(clientURL);
+    if (incoming.origin !== client.origin || incoming.pathname.startsWith(GAME_PREFIX) || incoming.pathname.startsWith('/__game/')) return request;
+    const context = proxyContext(client.pathname);
+    const prefix = client.pathname.startsWith(GAME_PREFIX) ? context.prefix : client.pathname.startsWith('/__game/v4/') ? '/__game/v4/' : null;
+    if (!prefix) return request;
+    const host = client.pathname.slice(prefix.length).split('/')[0];
+    if (!host || !host.includes('.')) return request;
+    incoming.pathname = prefix + host + incoming.pathname;
+    const headers = new Headers(request.headers);
+    headers.set('X-Playdeck-Destination', request.destination || headers.get('X-Playdeck-Destination') || headers.get('sec-fetch-dest') || 'empty');
+    return new Request(incoming, {...{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:request.redirect,credentials:request.credentials,cache:request.cache,integrity:request.integrity,signal:request.signal},mode:request.mode==='navigate'?'same-origin':request.mode,...(!['GET','HEAD'].includes(request.method)?{duplex:'half'}:{})});
+  } catch { return request; }
+}
