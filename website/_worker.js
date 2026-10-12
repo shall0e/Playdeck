@@ -86,7 +86,8 @@ export function bootstrap(base, origin, worker = false, prefix = PREFIX, mode='a
   const params = [base, origin, prefix].map(value => JSON.stringify(value).replace(/</g, '\\u003c')).join(',');
   const desktop = prefix===LOCAL_PREFIX ? '('+desktopOverrides.toString()+')('+desktopMedia.toString()+','+JSON.stringify(DESKTOP_UA)+','+JSON.stringify(mode)+');' : '';
   const pointer=prefix===LOCAL_PREFIX ? '('+installPointerCompatibility.toString()+')();' : '';
-  const script = '(()=>{'+INJECTED_NAMES+desktop+(prefix===LOCAL_PREFIX?'('+installPerformance.toString()+')('+JSON.stringify(mode)+','+JSON.stringify('timebomb-performance:'+new URL(base).origin)+');':'')+pointer+s3tcBootstrap(base,prefix)+'(' + CLIENT_HOOK + ')(' + params + ');})();';
+  const identity=prefix===LOCAL_PREFIX ? '('+installPageIdentity.toString()+')('+params+');' : '';
+  const script = '(()=>{'+INJECTED_NAMES+identity+desktop+(prefix===LOCAL_PREFIX?'('+installPerformance.toString()+')('+JSON.stringify(mode)+','+JSON.stringify('timebomb-performance:'+new URL(base).origin)+');':'')+pointer+s3tcBootstrap(base,prefix)+'(' + CLIENT_HOOK + ')(' + params + ');})();';
   return worker ? script : '<script data-cfasync="false">' + script + '</script>';
 }
 export function s3tcBootstrap(base,prefix) {
@@ -98,8 +99,36 @@ export function rewriteCSS(text, base, origin, prefix = PREFIX, mode='native') {
   return text.replace(/url\(\s*(['"]?)([^)'"]+)\1\s*\)/gi, (_, quote, value) => 'url(' + JSON.stringify(proxyURL(value.trim(), base, origin, prefix)) + ')')
     .replace(/(@import\s+)(['"])([^'"]+)\2/gi, (_, lead, quote, value) => lead + JSON.stringify(proxyURL(value, base, origin, prefix)));
 }
+
+export function rewritePageIdentity(text, prefix = PREFIX) {
+  if (prefix !== LOCAL_PREFIX) return text;
+  // Skip literals and comments. Only replace read-only URL field access, never
+  // location navigation, assignments, or the Location object itself.
+  return text.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*|\/(?:\\.|[^\/\r\n\\])+\/[dgimsuvy]*|\b(?:(?:window|self|globalThis|document)\s*\.\s*)?location\s*\.\s*(href|origin|hostname|host|protocol|pathname|search|hash)\b/g, (match, field, offset, source) => {
+    if (!field || /[\w$.]/.test(source[offset-1] || '') || /^\s*(?:=(?!=)|\+\+|--|[+*/%&|^-]=)/.test(source.slice(offset+match.length))) return match;
+    return 'globalThis.__playdeckSourceLocation.' + field;
+  });
+}
+export function installPageIdentity(base, origin, prefix) {
+  const source = value => {
+    try {
+      const url = new URL(value);
+      return url.origin === origin && url.pathname.startsWith(prefix)
+        ? new URL('https://' + url.pathname.slice(prefix.length) + url.search + url.hash) : new URL(base);
+    } catch { return new URL(base); }
+  };
+  // Resolve on every read so history updates remain visible to the game.
+  Object.defineProperty(globalThis, '__playdeckSourceLocation', {configurable:true,
+    get:()=>source(globalThis.location?.href || base)});
+  if (typeof document === 'undefined') return;
+  for (const key of ['URL','documentURI']) {
+    try { Object.defineProperty(document,key,{configurable:true,get:()=>globalThis.__playdeckSourceLocation.href}); } catch {}
+  }
+  try { Object.defineProperty(document,'referrer',{configurable:true,get:()=>''}); } catch {}
+}
+
 export function rewriteJS(text, base, origin, prefix = PREFIX) {
-  text = rewriteGameCompatibility(text,base,prefix);
+  text = rewritePageIdentity(rewriteGameCompatibility(text,base,prefix),prefix);
   // Only module specifiers are source URLs. Ordinary strings can be origin checks,
   // regexes, packed data or integrity-sensitive values: runtime hooks handle requests.
   return text.replace(/(\b(?:from|import)\s*|\bimport\s*\(\s*)(['"])((?:https:\/\/|\/\/|\.{1,2}\/|\/(?!\/))[^'"\\]+)\2/g,
@@ -242,7 +271,7 @@ export default {
       }
       const selected=(request.headers.get('cookie') || '').match(/(?:^|;\s*)tb_performance=(full|auto|fast|native)(?:;|$)/)?.[1] || 'full';
       const headers = proxyHeaders(response,target,routePrefix);
-      if(local)headers.set('X-Timebomb-Desktop','6');
+      if(local)headers.set('X-Timebomb-Desktop','7');
       const type = headers.get('content-type') || '';
       // Do not buffer null responses, ranges, large payloads, or integrity-checked KSP scripts.
       if (request.method === 'HEAD' || [204,205,304].includes(response.status) || response.status === 206 || (target.hostname === 'kerbalspaceprogram.pages.dev' && /javascript|ecmascript/i.test(type)) || !/(text\/html|text\/css|javascript|ecmascript)/i.test(type))
