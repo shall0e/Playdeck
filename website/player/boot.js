@@ -76,7 +76,7 @@ try {
 } catch {gameURL=null;$('#error').hidden=false;$('#error').textContent=launchError?.message || 'This game link is invalid.';}
 
 const menuBar=document.createElement('div');menuBar.id='game-menu-bar';
-document.body.append(menuBar);menuBar.append($('#badge'));$('#badge').innerHTML=toolbarIcon('settings')+'<span>Settings</span>';
+document.body.append(menuBar);menuBar.append($('#badge'));$('#badge').textContent='Settings';$('#badge').innerHTML='<svg class="lucide-icon lucide-settings" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg><span>Settings</span>';
 const gameMenu=document.createElement('details');gameMenu.className='game-menu';
 gameMenu.innerHTML='<summary>'+toolbarIcon('menu')+'<span>Menu</span></summary><section class="game-menu-panel" aria-label="Game controls"><button type="button" data-action="return">Return to library</button><button type="button" data-action="reload">Reload game</button><button type="button" data-action="fullscreen">Toggle fullscreen</button><button type="button" data-action="exit">Close game</button><button type="button" data-action="cast">Cast to TV</button></section>';
 menuBar.append(gameMenu);
@@ -409,7 +409,7 @@ let statsTimer,statsLast=0;
 function refreshStats() {
   clearTimeout(statsTimer);
   statsTimer=setTimeout(async()=>{
-    try {const stats=await send('sandbox:stats');statsLast=Date.now();$('#files').textContent=`${stats.files} downloaded files`;$('#badge').innerHTML=toolbarIcon('settings')+'<span>Settings</span>';$('#clear-game').disabled=!gameURL || !worker || stats.gameFiles===0;} catch {}
+    try {const stats=await send('sandbox:stats');statsLast=Date.now();$('#files').textContent=`${stats.files} downloaded files`;$('#badge').textContent='Settings';$('#badge').innerHTML='<svg class="lucide-icon lucide-settings" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg><span>Settings</span>';$('#clear-game').disabled=!gameURL || !worker || stats.gameFiles===0;} catch {}
   },gameReady && $('#panel').hidden ? Math.max(500,5000-(Date.now()-statsLast)) : 500);
 }
 function configChild() {if (panicBind && frame) frame.contentWindow.postMessage({type:'playdeck:panic-config',bind:panicBind},location.origin);}
@@ -574,7 +574,7 @@ async function start() {
     // Third-party storage can be blocked on mobile. The server proxy still runs online.
     worker=null;
     $('#storage-note').textContent='Browser storage is unavailable. This game is running online without offline downloads.';
-    $('#files').textContent='Online mode';$('#badge').innerHTML=toolbarIcon('settings')+'<span>Settings</span>';$('#clear').disabled=true;$('#clear-game').disabled=true;
+    $('#files').textContent='Online mode';$('#badge').textContent='Settings';$('#badge').innerHTML='<svg class="lucide-icon lucide-settings" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg><span>Settings</span>';$('#clear').disabled=true;$('#clear-game').disabled=true;
   }
   // Let the game's own document load its dependencies once, in the correct order.
   mount(gamePath(LOCAL));if(worker)refreshStats();
