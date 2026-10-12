@@ -1,0 +1,22 @@
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless
+  Permissions-Policy: cross-origin-isolated=(self "https://playdeck-1z1.pages.dev" "https://ports.shall0e.workers.dev")
+
+/player/*
+  Cross-Origin-Resource-Policy: cross-origin
+  Content-Security-Policy: frame-ancestors https: http://localhost:* http://127.0.0.1:*
+  Cache-Control: no-cache, must-revalidate
+
+/player/sw.js
+  Service-Worker-Allowed: /
+
+/app.js
+  Cache-Control: no-cache, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/
+  Cache-Control: no-cache, must-revalidate
+

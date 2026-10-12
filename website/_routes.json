@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "include": [
+    "/__game/*",
+    "/player/*",
+    "/player",
+    "/__sandbox",
+    "/__sandbox/*",
+    "/_sandbox",
+    "/_sandbox/*"
+  ],
+  "exclude": []
+}
