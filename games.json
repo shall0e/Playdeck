@@ -96,8 +96,7 @@
       "name": "Call of Duty: Black Ops 2 Zombies",
       "image": "https://cdn.wallpapersafari.com/30/7/zvuRo3.jpg",
       "playUrl": "https://zombies.mdelworkstation.cc/?raw=1",
-      "openInNewTab": true,
-      "noProxy": true
+      "openInNewTab": true
     },
     {
       "name": "Half Life 1",
