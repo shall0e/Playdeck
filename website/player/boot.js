@@ -3,19 +3,9 @@ import { readLaunchOptions } from './launch-options.js';
 import { playerViewport, fixedGameViewport } from './viewport.js';
 import { initialRenderBudget, reduceRenderBudget } from './performance.js';
 import { installController } from './controller.js';
-import {
-  readSettings,
-  readGameSettings,
-  installSettings,
-  matchesBind,
-} from './settings.js';
+import { readSettings, readGameSettings, installSettings, matchesBind } from './settings.js';
 import { installToolbar } from './toolbar.js';
-import {
-  displayCSS,
-  displayMarkup,
-  displayConfig,
-  canvasDisplayBox,
-} from './display.js';
+import { displayCSS, displayMarkup, displayConfig, canvasDisplayBox } from './display.js';
 import { iconMarkup as toolbarIcon } from './toolbar-icons.js';
 const LOCAL = '/player/games/';
 
@@ -93,7 +83,10 @@ function revealGame() {
   clearTimeout(idleTimer);
   clearTimeout(slowTimer);
   $('#loading').hidden = true;
-  frame.focus();
+  // Loading must not steal focus from settings opened during the import.
+  const active = document.activeElement;
+  if (!menuBar.contains(active) && !$('#panel').contains(active) && !castDialog.contains(active))
+    frame.focus();
   refreshStats();
   parent.postMessage({ type: 'playdeck:game-ready' }, parentOrigin);
 }
