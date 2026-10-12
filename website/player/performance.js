@@ -9,12 +9,19 @@ export function reduceRenderBudget(budget, sample) {
   return Math.max(640, Math.round((budget * 0.8) / 16) * 16);
 }
 
+export function adaptiveRenderBudget(budget,sample,maximum=1280) {
+  const reduced=reduceRenderBudget(budget,sample);
+  if(reduced!==budget)return reduced;
+  if(sample?.count>=90 && sample.slowRatio<.03 && sample.p90<20)return Math.min(maximum,Math.max(budget,Math.round(budget*1.1/16)*16));
+  return budget;
+}
+
 // Serialized into both page and worker realms by the proxy.
 export function installPerformance(mode = 'auto', channelName = '') {
   if (globalThis.__timebombPerformanceInstalled) return;
   globalThis.__timebombPerformanceInstalled = true;
   globalThis.__timebombPerformanceMode = mode;
-  if (mode === 'native' || mode === 'full') return;
+  const reduceQuality=mode==='auto' || mode==='fast';
   const canvasTypes = ['HTMLCanvasElement', 'OffscreenCanvas'];
   const canvases = new Set();
   const telemetry = { renderer: '', fps: 0, p90: 0, slowRatio: 0, count: 0 };
@@ -23,6 +30,7 @@ export function installPerformance(mode = 'auto', channelName = '') {
     if (channelName && typeof BroadcastChannel === 'function')
       channel = new BroadcastChannel(channelName);
   } catch {}
+  if(!reduceQuality && !channel)return;
   const report = (data) => {
     try {
       channel?.postMessage(data);
@@ -31,12 +39,12 @@ export function installPerformance(mode = 'auto', channelName = '') {
   if (typeof window !== 'undefined') {
     const nativeDPR = window.devicePixelRatio || 1;
     const cap = mode === 'fast' ? 0.75 : 1;
-    try {
+    try {if(reduceQuality){
       Object.defineProperty(window, 'devicePixelRatio', {
         configurable: true,
         get: () => Math.min(nativeDPR, cap),
       });
-    } catch {}
+    }} catch {}
     window.addEventListener('pagehide', () => channel?.close(), { once: true });
   }
   // Request the faster adapter without fabricating capabilities or limits.
@@ -45,7 +53,7 @@ export function installPerformance(mode = 'auto', channelName = '') {
     const native = gpu.requestAdapter.bind(gpu);
     try {
       gpu.requestAdapter = async (options) => {
-        const adapter = await native({ ...options, powerPreference: 'high-performance' });
+        const adapter = await native(reduceQuality?{ ...options, powerPreference: 'high-performance' }:options);
         if (adapter?.requestDevice && channel) {
           const request = adapter.requestDevice.bind(adapter);
           try {
@@ -72,11 +80,11 @@ export function installPerformance(mode = 'auto', channelName = '') {
     const native = proto.getContext;
     proto.getContext = function (type, options, ...rest) {
       const webgl = /^(webgl2?|experimental-webgl)$/.test(type);
-      const attributes = webgl
+      const attributes = webgl && reduceQuality
         ? { ...options, powerPreference: 'high-performance', antialias: false }
         : options;
       const context = native.call(this, type, attributes, ...rest);
-      if (context && (webgl || type === 'webgpu')) {
+      if (context && (webgl || type === 'webgpu' || type==='2d')) {
         if (!canvases.has(this) && webgl && channel)
           this.addEventListener?.('webglcontextlost', () => {
             if (this.width * this.height >= 65536)
@@ -149,3 +157,4 @@ export function installPerformance(mode = 'auto', channelName = '') {
       });
   }
 }
+

@@ -1,0 +1,28 @@
+name: Verify Playdeck features
+on:
+  push:
+    branches: [playdeck-feature-rollout]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  player:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+      - run: npm install --no-save --package-lock=false playwright@1.58.2
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/verify-player-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playdeck-features
+          path: playdeck-*.png
+          if-no-files-found: ignore

@@ -1,3 +1,7 @@
+import {createSession,gameId} from './session.js';
+import {readProfile,profiles} from './profiles.js';
+import {installDeck,showRecentGames,showLinkBuilder} from './deck.js';
+import {adaptiveRenderBudget} from './performance.js';
 import { PERFORMANCE_OPTIONS, PERFORMANCE_MODES } from './options.js';
 import { readLaunchOptions } from './launch-options.js';
 import { playerViewport, fixedGameViewport } from './viewport.js';
@@ -63,11 +67,6 @@ let renderBudget = initialRenderBudget(
   navigator.deviceMemory,
   navigator.hardwareConcurrency,
 );
-// A partitioned cookie carries the same mode into game workers, which lack localStorage.
-try {
-  document.cookie =
-    'tb_performance=' + performanceMode + '; Path=/; Secure; SameSite=None; Partitioned';
-} catch {}
 let pageLoaded = false,
   gameReady = false,
   idleTimer,
@@ -161,6 +160,10 @@ try {
   $('#error').textContent = launchError?.message || 'This game link is invalid.';
 }
 
+let launchSession=null,deck=null;
+if(gameURL){const saved=profiles()[gameId(gameURL.href)]?.profile;if(saved && !launch.performance)performanceMode=readProfile(gameURL.href).performance;renderBudget=initialRenderBudget(performanceMode,navigator.deviceMemory,navigator.hardwareConcurrency);launchSession=createSession(gameURL.href,performanceMode,readProfile(gameURL.href).compatibility);}
+const launchCleanups=new Set();
+function tearDownLaunch(){clearInterval(enginePoll);clearInterval(activityPoll);clearTimeout(idleTimer);clearTimeout(slowTimer);for(const cleanup of launchCleanups){try{cleanup();}catch{}}launchCleanups.clear();cleanupDocuments.clear();cleanupHidden.clear();controllerMapper?.setPaused(true);controllerMapper?.detach();}
 const menuBar = document.createElement('div');
 menuBar.id = 'game-menu-bar';
 document.body.append(menuBar);
@@ -171,7 +174,7 @@ gameMenu.className = 'game-menu';
 gameMenu.innerHTML =
   '<summary>' +
   toolbarIcon('menu') +
-  '<span>Menu</span></summary><section class="game-menu-panel" aria-label="Game controls"><button type="button" data-action="return">Return to library</button><button type="button" data-action="reload">Reload game</button><button type="button" data-action="fullscreen">Toggle fullscreen</button><button type="button" data-action="exit">Close game</button><button type="button" data-action="cast">Cast to TV</button></section>';
+  '<span>Menu</span></summary><section class="game-menu-panel" aria-label="Game controls"><button type="button" data-action="return">Return to library</button><button type="button" data-action="reload">Reload game</button><button type="button" data-action="fullscreen">Toggle fullscreen</button><button type="button" data-action="exit">Close game</button><button type="button" data-action="cast">Screen mirroring</button></section>';
 menuBar.append(gameMenu);
 gameMenu.addEventListener('click', (event) => {
   const action = event.target.closest('[data-action]')?.dataset.action;
@@ -190,7 +193,7 @@ gameMenu.addEventListener('click', (event) => {
     return;
   }
   if (action === 'reload') {
-    mount(gamePath(LOCAL));
+  mount(gamePath(LOCAL));
     return;
   }
   if (!embedded) {
@@ -241,7 +244,7 @@ let gameDisplay = null,
 const castDialog = document.createElement('dialog');
 castDialog.id = 'tv-cast';
 castDialog.innerHTML =
-  '<form method="dialog"><header><h2>Cast to TV</h2><button aria-label="Close" value="close">Close</button></header><label>TV resolution <select id="tv-resolution"><option value="auto">Automatic / device screen</option><option value="1280x720">720p - 1280 × 720</option><option value="1920x1080">1080p - 1920 × 1080</option><option value="3840x2160">4K - 3840 × 2160</option></select></label><p id="tv-status" role="status">Mirror your current game using your device’s casting controls.</p><button type="button" id="tv-connect">Open Android Cast</button><button type="button" id="tv-stop" hidden>Stop casting</button><p>Keep both devices on the same Wi-Fi. Automatic uses this device’s viewport; a mirrored TV does not report its resolution to the website. Choose 720p, 1080p, or 4K to set the game viewport - this does not change the casting stream’s quality. Pixel phones need a Google Cast receiver; Fire TV’s built-in mirroring uses a different protocol.</p></form>';
+  '<form method="dialog"><header><h2>Screen mirroring</h2><button aria-label="Close" value="close">Close</button></header><label>TV resolution <select id="tv-resolution"><option value="auto">Automatic / device screen</option><option value="1280x720">720p - 1280 × 720</option><option value="1920x1080">1080p - 1920 × 1080</option><option value="3840x2160">4K - 3840 × 2160</option></select></label><p id="tv-status" role="status">Mirror your current game using your device’s casting controls.</p><button type="button" id="tv-connect">Open Android Cast</button><button type="button" id="tv-stop" hidden>Stop casting</button><p>Keep both devices on the same Wi-Fi. Automatic uses this device’s viewport; a mirrored TV does not report its resolution to the website. Choose 720p, 1080p, or 4K to set the game viewport - this does not change the casting stream’s quality. Pixel phones need a Google Cast receiver; Fire TV’s built-in mirroring uses a different protocol.</p></form>';
 document.body.append(castDialog);
 const castStyle = document.createElement('style');
 castStyle.textContent =
@@ -336,7 +339,9 @@ function findGameCanvas(doc, depth = 0) {
 const legacyInputCanvases = new WeakSet();
 function alignLegacyCanvasInput(canvas) {
   // Clickteam's HTML5 runtime uses layout offsets instead of the displayed rect.
-  if (canvas.id !== 'MMFCanvas' || legacyInputCanvases.has(canvas)) return;
+  const runtime=canvas.ownerDocument.defaultView;
+  const bufferCoordinates=runtime.PlaydeckAdapter?.inputCoordinates==='buffer' || (typeof runtime.CRunApp==='function' && typeof runtime.CRun==='function') || canvas.id==='MMFCanvas';
+  if (!bufferCoordinates || legacyInputCanvases.has(canvas)) return;
   legacyInputCanvases.add(canvas);
   const normalize = (event) => {
     if (canvas !== expandedCanvas || canvas.ownerDocument.pointerLockElement) return;
@@ -517,7 +522,7 @@ function setupDisplay(data) {
       ...data.config.ratios.map((r) => {
         const option = document.createElement('option');
         option.value = r;
-        option.textContent = r === 'auto' ? 'Screen' : r;
+        option.textContent = r === 'auto' ? 'Screen' : r==='16:9'?'16:9 · fill screen':r;
         return option;
       }),
     );
@@ -548,6 +553,7 @@ performanceControl.querySelector('select').onchange = (event) => {
   performanceMode = event.target.value;
   try {
     localStorage.setItem('playdeck.performance.v2', performanceMode);
+    if(gameURL)deck?.save({...deck.profile(),performance:performanceMode});
   } catch {}
   const nextURL = new URL(location.href);
   nextURL.searchParams.set('performance', performanceMode);
@@ -558,8 +564,9 @@ document.body.classList.toggle('performance-active', performanceMode !== 'native
 // Unified chrome remains blurred; the small toolbar is hidden during normal gameplay.
 let performanceChannel = null,
   lastBudgetChange = 0;
+function connectPerformanceChannel(){performanceChannel?.close();
 try {
-  performanceChannel = new BroadcastChannel('timebomb-performance:' + gameURL.origin);
+  performanceChannel = new BroadcastChannel(launchSession?'playdeck-performance:'+launchSession.id:'timebomb-performance:' + gameURL.origin);
   performanceChannel.onmessage = (event) => {
     const data = event.data;
     if (['graphics-failure', 'allocation-failure'].includes(data?.type)) {
@@ -569,6 +576,7 @@ try {
     }
     if (data?.type !== 'cadence' || !Number.isFinite(data.fps) || !Number.isFinite(data.p90))
       return;
+    deck?.sample(data);
     if (
       performanceMode !== 'auto' ||
       document.hidden ||
@@ -576,7 +584,8 @@ try {
       Date.now() - lastBudgetChange < 10000
     )
       return;
-    const reduced = reduceRenderBudget(renderBudget, data);
+    const maximum=initialRenderBudget('auto',navigator.deviceMemory,navigator.hardwareConcurrency);
+    const reduced = adaptiveRenderBudget(renderBudget,data,maximum);
     if (reduced !== renderBudget) {
       renderBudget = reduced;
       lastBudgetChange = Date.now();
@@ -585,11 +594,14 @@ try {
   };
   window.addEventListener('pagehide', () => performanceChannel?.close(), { once: true });
 } catch {}
+}
+connectPerformanceChannel();
 
 let hidePageExtras = true;
 try {
   hidePageExtras = localStorage.getItem('timebomb.hidePageExtras') !== 'false';
 } catch {}
+if(gameURL && profiles()[gameId(gameURL.href)]?.profile)hidePageExtras=readProfile(gameURL.href).hidePageExtras;
 if (launch.hidePageExtras !== undefined) hidePageExtras = launch.hidePageExtras;
 const cleanupDocuments = new Set(),
   cleanupHidden = new Set();
@@ -757,6 +769,7 @@ function cleanGameDocument(doc) {
     }
     if (pending.size && !timer) timer = setTimeout(scan, 750);
   });
+  launchCleanups.add(()=>{observer.disconnect();clearTimeout(timer);pending.clear();});
   observer.observe(doc.documentElement || doc, {
     subtree: true,
     childList: true,
@@ -772,6 +785,7 @@ function cleanGameDocument(doc) {
 }
 extrasToggle.querySelector('input').onchange = (event) => {
   hidePageExtras = event.target.checked;
+  if(gameURL)deck?.save({...deck.profile(),hidePageExtras});
   try {
     localStorage.setItem('timebomb.hidePageExtras', String(hidePageExtras));
   } catch {}
@@ -802,6 +816,7 @@ const controllerMapper =
     : null;
 requestAnimationFrame(alignMenuPanels);
 function gamePath(prefix) {
+  prefix=prefix===LOCAL && launchSession?launchSession.prefix:prefix;
   return location.origin + prefix + gameURL.host + gameURL.pathname + gameURL.search + gameURL.hash;
 }
 function send(type, data = {}) {
@@ -816,7 +831,7 @@ function send(type, data = {}) {
       channel.port1.close();
       event.data.ok ? resolve(event.data) : reject(new Error(event.data.error));
     };
-    (navigator.serviceWorker.controller || worker).postMessage({ type, ...data }, [channel.port2]);
+    (navigator.serviceWorker.controller || worker).postMessage({ type, session:launchSession?.id,game:launchSession?.game,performance:performanceMode,...data }, [channel.port2]);
   });
 }
 let statsTimer,
@@ -1043,6 +1058,7 @@ function stabilizeGameMouse(doc) {
   }
 }
 function mount(url) {
+  tearDownLaunch();gameFailureReported=false;
   restoreExpandedCanvas();
   mouseLockTarget = null;
   mouseLockDocument = null;
@@ -1098,7 +1114,7 @@ function mount(url) {
       );
       cleanGameDocument(frame.contentDocument);
     } catch {}
-    configChild();
+    configChild();deck?.mounted();
     checkDownloads();
   });
   frame.src = url;
@@ -1115,13 +1131,14 @@ $('#badge').onclick = () => {
 };
 async function clearDownloads(currentOnly) {
   if (currentOnly && !gameURL) return;
+  tearDownLaunch();
   frame?.remove();
   frame = null;
   $('#clear').disabled = true;
   $('#clear-game').disabled = true;
   $('#files').textContent = 'Clearing downloaded files…';
   try {
-    await send(currentOnly ? 'sandbox:clear-game' : 'sandbox:clear');
+    await send(currentOnly && launchSession?'sandbox:remove-owner':currentOnly?'sandbox:clear-game':'sandbox:clear',currentOnly && launchSession?{owner:launchSession.game}:{});
     $('#files').textContent = currentOnly
       ? 'This game’s cached files cleared.'
       : 'Downloaded files cleared.';
@@ -1145,10 +1162,7 @@ window.addEventListener('message', (event) => {
       parent.postMessage({ type: 'playdeck:health-pong' }, parentOrigin);
     // Display configuration is supplied in the launch URL, not catalog-owned markup.
     // Panic preferences are owned and persisted by Playdeck.
-    if (event.data?.type === 'playdeck:state') {
-      controllerMapper?.setPaused(event.data.paused);
-      frame?.contentWindow.postMessage(event.data, location.origin);
-    }
+    if (event.data?.type === 'playdeck:state') deck?.setParentState(event.data);
   } else if (
     frame &&
     event.source === frame.contentWindow &&
@@ -1171,6 +1185,7 @@ window.addEventListener(
   true,
 );
 navigator.serviceWorker?.addEventListener('message', (event) => {
+  if(event.data?.session && event.data.session!==launchSession?.id)return;
   if (event.data?.type === 'sandbox:downloads') downloadActivity(event.data);
   if (event.data?.type === 'sandbox:saved') refreshStats();
   if (event.data?.type === 'sandbox:storage-error') {
@@ -1250,6 +1265,7 @@ async function start() {
     $('#clear-game').disabled = true;
   }
   // Let the game's own document load its dependencies once, in the correct order.
+  if(worker)try{await send('sandbox:config');}catch{}
   mount(gamePath(LOCAL));
   if (worker) refreshStats();
 }
@@ -1265,7 +1281,7 @@ installSettings(
   },
   { gameURL: gameURL?.href, nativeGamepad },
 );
-const toolbar = installToolbar(menuBar, $('#panel'), {
+const toolbar=installToolbar(menuBar, $('#panel'), {
   getFrame: () => frame,
   alwaysVisible: launch.toolbar === 'visible',
 });
@@ -1309,6 +1325,10 @@ if (gameURL) {
     '<a href="/docs/">URL API &amp; deployment guide</a> · <a href="/downloads/playdeck-source.zip" download>Download source</a> · <a href="/downloads/playdeck-deploy.zip" download>Deployable ZIP</a>';
   $('#loading').append(links);
 }
+deck=installDeck({gameURL:gameURL?.href,name,image:params.get('image'),getFrame:()=>frame,getSession:()=>launchSession,getMode:()=>performanceMode,launchOptions:{nativeGamepad,displayOptions:displayOptionsConfig},toolbar,send,reload:({online=false}={})=>{if(!gameURL)return;launchSession=createSession(gameURL.href,performanceMode,readProfile(gameURL.href).compatibility);connectPerformanceChannel();send('sandbox:config',{online}).catch(()=>{}).finally(()=>mount(gamePath(LOCAL)));},setState:data=>{controllerMapper?.setPaused(data.paused);frame?.contentWindow.postMessage({type:'playdeck:state',...data},location.origin);}});
+if(!gameURL && !params.get('url')){const recent=document.createElement('button');recent.type='button';recent.textContent='Recent games';recent.onclick=()=>showRecentGames();const link=document.createElement('button');link.type='button';link.textContent='Build launch link';link.onclick=()=>showLinkBuilder();$('#loading').append(recent,link);}
+window.addEventListener('pagehide',tearDownLaunch,{once:true});
 announceSettings();
 if (embedded) parent.postMessage({ type: 'playdeck:sandbox-ready' }, parentOrigin);
 start();
+
