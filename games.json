@@ -91,6 +91,17 @@
       "playUrl": "https://ports.shall0e.workers.dev/cod4/",
       "description": "Play the Call of Duty 4: Modern Warfare browser port.",
       "warning": "First launch downloads about 6.5 GiB. Use Chrome or Edge with enough free storage."
+    },
+    {
+      "name": "Call of Duty: Black Ops 2 Zombies",
+      "image": "https://cdn.wallpapersafari.com/30/7/zvuRo3.jpg",
+      "playUrl": "https://zombies.mdelworkstation.cc/",
+    },
+    {
+      "name": "Half Life 1",
+      "image": "https://i.redd.it/igpyp0itos4h1.png",
+      "playUrl": "https://pixelsuft.github.io/hl/xash.html#150",
+      "displayOptions": true
     }
   ]
 }
