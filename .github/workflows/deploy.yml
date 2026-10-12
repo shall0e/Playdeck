@@ -27,7 +27,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          PLAYER_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'playdeck-1z1' }}
+          PLAYER_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'playdeck' }}
+          PLAYER_HOST: ${{ vars.PLAYDECK_HOST || 'playdeck-1z1.pages.dev' }}
         run: node scripts/pages-project.mjs
       - name: Deploy player
         uses: cloudflare/wrangler-action@v3
@@ -38,7 +39,7 @@ jobs:
           command: pages deploy dist --project-name ${{ env.PAGES_PROJECT }} --branch ${{ env.PAGES_PRODUCTION_BRANCH }}
       - name: Verify deployed Playdeck toolbar in Chromium
         env:
-          PLAYDECK_URL: https://${{ env.PAGES_PROJECT }}.pages.dev
+          PLAYDECK_URL: ${{ env.PAGES_URL }}
         run: |
           npm install --no-save --package-lock=false playwright
           npx playwright install --with-deps chromium
