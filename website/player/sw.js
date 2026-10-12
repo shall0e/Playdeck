@@ -1,6 +1,9 @@
 const PREFIX='/player/games/';
 const CACHE='timebomb-local-games-v1';
-const SHELL='playdeck-local-shell-v21';
+const SHELL='playdeck-local-shell-v22';
+const METADATA='playdeck-local-hashes-v1';
+export const RECHECK_MS=5*60*1000;
+const UNVERSIONED_MS=24*60*60*1000;
 const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/settings.js','/player/toolbar.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
 const OLD_PREFIX='/__sandbox/games/';
 
@@ -42,29 +45,50 @@ export function isAsset(request) {
     !/(^|\/)api(\/|$)/i.test(url.pathname) && !request.headers.has('authorization') &&
     !request.headers.has('X-KSP-Offline-Download');
 }
+// Limit hashing buffers, not the size of files saved to disk.
 export const MAX_CACHE_BYTES=8*1024*1024;
-let cacheWrites=0,lastActivityNotification=0;
+let lastActivityNotification=0;
 export function canStore(request,response) {
-  return isAsset(request) && request.cache!=='no-store' && Number(response.headers.get('Content-Length') || 0)<=MAX_CACHE_BYTES && request.method==='GET' && response.status===200 && response.type!=='opaque' &&
+  return isAsset(request) && response.headers.get('X-Playdeck-No-Store')!=='1' && request.method==='GET' && response.status===200 && response.type!=='opaque' &&
     !response.headers.has('Content-Range') && !request.headers.has('Range');
 }
-export async function cachedRange(response,range,head=false) {
-  const blob=await response.blob();
+export async function cachedRange(response,range,head=false,size=Number(response.headers.get('Content-Length') || 0)) {
   const match=/^bytes=(\d*)-(\d*)$/.exec(range || '');
   if (!match || (!match[1] && !match[2])) return null;
-  let start=match[1] ? Number(match[1]) : Math.max(0,blob.size-Number(match[2]));
-  let end=match[1] ? (match[2] ? Number(match[2]) : blob.size-1) : blob.size-1;
-  const headers=new Headers(response.headers);
-  headers.delete('content-encoding');
-  if (start>=blob.size || end<start) {
-    headers.set('Content-Range','bytes */'+blob.size);
+  if(!size){
+    const blob=await response.blob();
+    if(!blob.size){const headers=new Headers(response.headers);headers.set('Content-Range','bytes */0');return new Response(null,{status:416,headers});}
+    return cachedRange(new Response(blob,{headers:response.headers}),range,head,blob.size);
+  }
+  const start=match[1] ? Number(match[1]) : Math.max(0,size-Number(match[2]));
+  let end=match[1] ? (match[2] ? Number(match[2]) : size-1) : size-1;
+  const headers=new Headers(response.headers);headers.delete('content-encoding');
+  if (start>=size || end<start) {
+    headers.set('Content-Range','bytes */'+size);
     return new Response(null,{status:416,headers});
   }
-  end=Math.min(end,blob.size-1);
-  headers.set('Content-Range',`bytes ${start}-${end}/${blob.size}`);
-  headers.set('Content-Length',String(end-start+1));
-  headers.set('Accept-Ranges','bytes');
-  return new Response(head ? null : blob.slice(start,end+1),{status:206,headers});
+  end=Math.min(end,size-1);
+  headers.set('Content-Range','bytes '+start+'-'+end+'/'+size);
+  headers.set('Content-Length',String(end-start+1));headers.set('Accept-Ranges','bytes');
+  if(head)return new Response(null,{status:206,headers});
+  const reader=response.body.getReader();let offset=0;
+  const body=new ReadableStream({
+    async pull(controller){
+      try{
+        while(true){
+          const next=await reader.read();
+          if(next.done){controller.close();return;}
+          const before=offset;offset+=next.value.byteLength;
+          if(offset<=start)continue;
+          controller.enqueue(next.value.subarray(Math.max(0,start-before),Math.min(next.value.byteLength,end+1-before)));
+          if(offset>end){await reader.cancel();controller.close();}
+          return;
+        }
+      }catch(error){controller.error(error);}
+    },
+    cancel(reason){return reader.cancel(reason);}
+  });
+  return new Response(body,{status:206,headers});
 }
 
 export function gameCacheScope(gameURL,origin){
@@ -93,58 +117,104 @@ async function inform(message) {
     if (new URL(client.url).pathname==='/player/') client.postMessage(message);
   }
 }
-export function cacheAsset(cache,key,response,event) {
-  // Bounded cache branch: the live game's stream always remains independent.
-  // Respect no-store loaders and never duplicate multi-GB game installs.
-  if(!canStore(key,response) || cacheWrites>=2)return false;
-  cacheWrites++;
-  const startedAt=cacheRevision;
-  let copy;
-  try {copy=response.clone();} catch {cacheWrites--;return false;}
-  let bytes=0;
-  const body=copy.body?.pipeThrough(new TransformStream({transform(chunk,controller){
-    bytes+=chunk.byteLength;
-    if(bytes>MAX_CACHE_BYTES){controller.error(new RangeError('Sandbox cache size limit'));return;}
-    controller.enqueue(chunk);
-  }}));
-  const stored=new Response(body,{status:copy.status,statusText:copy.statusText,headers:copy.headers});
-  event.waitUntil(cache.put(key,stored).then(async()=>{
-    if(clearHistory.some(entry=>entry.revision>startedAt && (!entry.scope || matchesGameCache(key,entry.scope))))await cache.delete(key);
+export function cacheAsset(cache,key,response,event,metadata) {
+  if(!canStore(key,response) || !response.body)return response;
+  // One reader feeds disk and the game with backpressure. Response.clone() on a
+  // multi-GB stream can otherwise queue the entire slower branch in memory.
+  const reader=response.body.getReader(),pipe=new TransformStream(),writer=pipe.writable.getWriter();
+  const startedAt=cacheRevision,chunks=[];
+  let bytes=0,writing=true;
+  const cleared=()=>clearHistory.some(entry=>entry.revision>startedAt && (!entry.scope || matchesGameCache(key,entry.scope)));
+  const saving=cache.put(key,new Response(pipe.readable,{status:response.status,statusText:response.statusText,headers:response.headers})).then(async()=>{
+    if(cleared()){await cache.delete(key);return;}
+    let hash=null;
+    if(bytes<=MAX_CACHE_BYTES){
+      const data=new Uint8Array(bytes);let offset=0;
+      for(const chunk of chunks){data.set(chunk,offset);offset+=chunk.byteLength;}
+      hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',data)),byte=>byte.toString(16).padStart(2,'0')).join('');
+    }
+    if(metadata){
+      await metadata.put(key,Response.json({bytes,hash,checkedAt:Date.now(),savedAt:Date.now()}));
+      if(cleared()){await cache.delete(key);await metadata.delete(key);return;}
+    }
     return inform({type:'sandbox:saved'});
   }).catch(error=>{
-    if(error instanceof RangeError)return;
+    writing=false;void writer.abort(error).catch(()=>{});
     return inform({type:'sandbox:storage-error',message:error.name==='QuotaExceededError'?'Browser storage is full. New files will stream until space is cleared.':'Some files could not be saved; the game will keep streaming.'});
-  }).finally(()=>{cacheWrites--;}));
-  return true;
+  });
+  event.waitUntil(saving);
+  const body=new ReadableStream({
+    async pull(controller){
+      try{
+        const next=await reader.read();
+        if(next.done){if(writing)try{await writer.close();}catch{}controller.close();return;}
+        bytes+=next.value.byteLength;
+        if(bytes<=MAX_CACHE_BYTES)chunks.push(next.value.slice());else chunks.length=0;
+        if(writing)try{await writer.write(next.value);}catch{writing=false;}
+        controller.enqueue(next.value);
+      }catch(error){if(writing)void writer.abort(error).catch(()=>{});controller.error(error);}
+    },
+    async cancel(reason){await Promise.allSettled([reader.cancel(reason),writer.abort(reason)]);}
+  });
+  return new Response(body,{status:response.status,statusText:response.statusText,headers:response.headers});
 }
 export async function localFetch(request,event) {
   if (!isAsset(request)) return networkFetch(request,event);
-  const cache=await caches.open(CACHE);
+  let cache,metadata;
+  try{[cache,metadata]=await Promise.all([caches.open(CACHE),caches.open(METADATA)]);}catch{return networkFetch(request,event);}
   const key=new Request(request.url);
-  let cached=await cache.match(key);
+  let cached=await cache.match(key),record,config;
+  try{record=await (await metadata.match(key))?.json();}catch{}
+  try{config=await (await metadata.match(new URL('/player/__cache-config',request.url).href))?.json();}catch{}
   if(!cached){
     const oldURL=new URL(request.url);oldURL.pathname=oldURL.pathname.replace(PREFIX,OLD_PREFIX);
     const old=await cache.match(new Request(oldURL.href));
-    // Binary downloads retain their bytes across the route rename. Rewritten scripts,
-    // HTML and styles are refreshed because their embedded routes may be obsolete.
     if(old && !/html|css|javascript|ecmascript/i.test(old.headers.get('Content-Type') || ''))cached=old;
   }
   const range=request.headers.get('Range');
-  if (cached && range && Number(cached.headers.get('Content-Length') || 0)<=MAX_CACHE_BYTES) {
-    const partial=await cachedRange(cached,range,request.method==='HEAD');
+  if (cached && range) {
+    const partial=await cachedRange(cached,range,request.method==='HEAD',record?.bytes || Number(cached.headers.get('Content-Length') || 0));
     if (partial) return partial;
   }
   if (cached && request.method==='HEAD') return new Response(null,{status:200,headers:cached.headers});
-  // Refresh launch pages/manifests online, reuse downloaded immutable assets.
-  const path=new URL(request.url).pathname;
-  const needsDesktop=cached && cached.headers.get('X-Timebomb-Desktop')!=='7' && (/text\/html|text\/css|javascript|ecmascript/i.test(cached.headers.get('Content-Type') || '') || ['worker','sharedworker'].includes(request.destination));
-  const mutable=needsDesktop || Boolean(range) || request.cache==='no-store' || ['worker','sharedworker','style'].includes(request.destination) || request.mode==='navigate' || /\.(html|json|webmanifest)(\?|$)/i.test(request.url);
-  if (cached && !mutable) return cached;
+  const rewritten=cached && /text\/html|text\/css|javascript|ecmascript/i.test(cached.headers.get('Content-Type') || '');
+  const transform=cached?.headers.get('X-Playdeck-Transform')?.split(':');
+  const destination=['worker','sharedworker'].includes(request.destination)?request.destination:'asset';
+  const needsDesktop=rewritten && (cached.headers.get('X-Timebomb-Desktop')!=='7' || !transform || transform[0]!=='hash-cache-1' || (config?.performance && transform[1]!==config.performance) || transform[2]!==destination);
+  const mutable=rewritten || request.mode==='navigate' || /\.(html|json|webmanifest)(\?|$)/i.test(request.url);
+  const force=['reload','no-cache'].includes(request.cache);
+  if(cached && !range && !needsDesktop && !force && Date.now()-(record?.checkedAt || 0)<RECHECK_MS)return cached;
+  const checkedAt=cacheRevision;
+  const markChecked=async()=>{
+    if(clearHistory.some(entry=>entry.revision>checkedAt && (!entry.scope || matchesGameCache(key,entry.scope))))return;
+    await metadata.put(key,Response.json({...record,checkedAt:Date.now(),savedAt:record?.savedAt || Date.now()}));
+    if(clearHistory.some(entry=>entry.revision>checkedAt && (!entry.scope || matchesGameCache(key,entry.scope))))await metadata.delete(key);
+  };
   try {
-    const response=await networkFetch(request,event);
+    const headers=new Headers(request.headers);
+    // Validators describe the upstream bytes, including scripts rewritten by
+    // Playdeck. A 304 means the saved body can be used without downloading it.
+    if(cached && !range && !needsDesktop){
+      const etag=cached.headers.get('X-Playdeck-Source-ETag') || cached.headers.get('ETag');
+      const modified=cached.headers.get('Last-Modified'),hash=cached.headers.get('X-Playdeck-Content-Hash');
+      if(etag)headers.set('If-None-Match',etag);
+      else if(modified)headers.set('If-Modified-Since',modified);
+      if(hash)headers.set('X-Playdeck-Known-Hash',hash);
+      if(cached.headers.has('X-Playdeck-Transform'))headers.set('X-Playdeck-Transform',cached.headers.get('X-Playdeck-Transform'));
+      if(!etag && !modified && !hash && !mutable){
+        const head=await networkFetch(new Request(request,{method:'HEAD',headers,cache:'no-cache'}),event);
+        const hashHeaders=['Content-Digest','Digest','Content-MD5','X-Playdeck-Source-ETag','ETag'];
+        const validator=hashHeaders.find(name=>cached.headers.has(name) && head.headers.has(name));
+        const unchanged=head.ok && (validator?head.headers.get(validator)===cached.headers.get(validator):!force && Date.now()-(record?.savedAt || Date.now())<UNVERSIONED_MS);
+        if(unchanged){event.waitUntil(markChecked().catch(()=>{}));return cached;}
+        if(head.status>=500)return cached;
+      }
+    }
+    const response=await networkFetch(new Request(request,{headers,cache:'no-cache'}),event);
+    if(response.status===304 && cached){event.waitUntil(markChecked().catch(()=>{}));return cached;}
     if (response.status>=500 && cached) return cached;
-    if(canStore(request,response))cacheAsset(cache,request,response,event);
-    return response;
+    if(response.headers.get('X-Playdeck-No-Store')==='1')event.waitUntil(Promise.all([cache.delete(key),metadata.delete(key)]));
+    return cacheAsset(cache,key,response,event,metadata);
   } catch(error) {
     if (cached) return cached;
     return new Response('This file has not been downloaded. Reconnect to import it.',{status:503,headers:{'Content-Type':'text/plain','Cross-Origin-Resource-Policy':'cross-origin'}});
@@ -179,17 +249,23 @@ if (typeof self!=='undefined' && self.addEventListener) {
     event.waitUntil((async()=>{
       const sourceURL=new URL(event.source.url);
       const scope=gameCacheScope(sourceURL.searchParams.get('url'),sourceURL.origin);
-      if (event.data?.type==='sandbox:activity') {
+      if (event.data?.type==='sandbox:config') {
+        if(!['full','auto','fast','native'].includes(event.data.performance))throw new Error('Invalid cache configuration');
+        const metadata=await caches.open(METADATA);
+        await metadata.put(sourceURL.origin+'/player/__cache-config',Response.json({performance:event.data.performance}));
+        port?.postMessage({ok:true});
+      } else if (event.data?.type==='sandbox:activity') {
         port?.postMessage({ok:true,...downloads.snapshot()});
       } else if (event.data?.type==='sandbox:clear') {
         clearHistory.push({revision:++cacheRevision,scope:null});
-        await caches.delete(CACHE);
+        await Promise.all([caches.delete(CACHE),caches.delete(METADATA)]);
         port?.postMessage({ok:true,files:0});
       } else if(event.data?.type==='sandbox:clear-game'){
         if(!scope)throw new Error('Invalid game scope');
         clearHistory.push({revision:++cacheRevision,scope});
         const cache=await caches.open(CACHE);
-        const cleared=await clearGameCache(cache,scope);port?.postMessage({ok:true,cleared});
+        const cleared=await clearGameCache(cache,scope);
+        await clearGameCache(await caches.open(METADATA),scope);port?.postMessage({ok:true,cleared});
       } else if (event.data?.type==='sandbox:stats') {
         const cache=await caches.open(CACHE);
         const keys=await cache.keys();port?.postMessage({ok:true,files:keys.length,gameFiles:keys.filter(key=>matchesGameCache(key,scope)).length});
@@ -197,6 +273,7 @@ if (typeof self!=='undefined' && self.addEventListener) {
     })().catch(error=>port?.postMessage({ok:false,error:error.message})));
   });
 }
+
 
 
 

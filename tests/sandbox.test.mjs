@@ -76,38 +76,39 @@ test('sandbox player and worker are routed with embeddable headers',async()=>{
 });
 
 
-test('cache honors no-store and excludes large payloads before cloning',()=>{
+test('static loader no-store and large payloads are saved, upstream private responses are excluded',()=>{
   const request=new Request(origin+prefix+'example.com/map.bin');
-  assert.equal(canStore(request,new Response('large',{headers:{'Content-Length':String(MAX_CACHE_BYTES+1)}})),false);
-  assert.equal(canStore(new Request(request,{cache:'no-store'}),new Response('small')),false);
+  assert.equal(canStore(request,new Response('large',{headers:{'Content-Length':String(MAX_CACHE_BYTES+1)}})),true);
+  assert.equal(canStore(new Request(request,{cache:'no-store'}),new Response('small')),true);
+  assert.equal(canStore(request,new Response('private',{headers:{'X-Playdeck-No-Store':'1'}})),false);
 });
-test('an oversized unknown-length cache branch cannot interrupt the live download',async()=>{
+test('unknown-length files above 8 MB stream completely to disk and the game without cloning',async()=>{
   const request=new Request(origin+prefix+'example.com/map.bin'),waits=[];
   const chunks=[new Uint8Array(MAX_CACHE_BYTES),new Uint8Array(1024)];
   const response=new Response(new ReadableStream({start(c){for(const chunk of chunks)c.enqueue(chunk);c.close();}}));
   let stored=false;
   const cache={put:async(key,value)=>{await value.arrayBuffer();stored=true;}};
-  assert.equal(cacheAsset(cache,request,response,{waitUntil:p=>waits.push(p)}),true);
-  const live=await response.arrayBuffer();await Promise.all(waits);
-  assert.equal(live.byteLength,MAX_CACHE_BYTES+1024);assert.equal(stored,false);
+  response.clone=()=>{throw new Error('Large streams must not be cloned');};
+  const live=await cacheAsset(cache,request,response,{waitUntil:p=>waits.push(p)}).arrayBuffer();await Promise.all(waits);
+  assert.equal(live.byteLength,MAX_CACHE_BYTES+1024);assert.equal(stored,true);
 });
-test('bounded cache completes small assets and releases its concurrency slots',async()=>{
+test('parallel downloads save every asset instead of discarding downloads after two writes',async()=>{
   const request=new Request(origin+prefix+'example.com/small.bin'),waits=[],values=[];
   const cache={put:async(key,value)=>values.push(await value.text())};
-  assert.equal(cacheAsset(cache,request,new Response('first'),{waitUntil:p=>waits.push(p)}),true);
-  assert.equal(cacheAsset(cache,request,new Response('second'),{waitUntil:p=>waits.push(p)}),true);
-  assert.equal(cacheAsset(cache,request,new Response('third'),{waitUntil:p=>waits.push(p)}),false);
-  await Promise.all(waits);assert.deepEqual(values.sort(),['first','second']);
+  const responses=['first','second','third'].map(text=>cacheAsset(cache,request,new Response(text),{waitUntil:p=>waits.push(p)}));
+  assert.deepEqual(await Promise.all(responses.map(response=>response.text())),['first','second','third']);
+  await Promise.all(waits);assert.deepEqual(values.sort(),['first','second','third']);
 });
 
-test('range reads of previously cached large assets stay partial and reach the network',async()=>{
+test('range reads of previously cached assets use local bytes without a download',async()=>{
   const previousFetch=globalThis.fetch,previousCaches=globalThis.caches,waits=[];let sent;
-  globalThis.caches={open:async()=>({match:async()=>new Response('old full file',{headers:{'Content-Length':String(MAX_CACHE_BYTES+100)}})})};
+  globalThis.caches={open:async()=>({match:async()=>new Response('old full file',{headers:{'Content-Length':'13'}})})};
   globalThis.fetch=async request=>{sent=request;return new Response('part',{status:206,headers:{'Content-Range':'bytes 0-3/9000000'}});};
   try {
     const response=await localFetch(new Request(origin+prefix+'example.com/large.bin',{headers:{Range:'bytes=0-3'}}),{waitUntil:p=>waits.push(p)});
-    assert.equal(response.status,206);assert.equal(await response.text(),'part');assert.equal(sent.headers.get('Range'),'bytes=0-3');
+    assert.equal(response.status,206);assert.equal(await response.text(),'old ');assert.equal(sent,undefined);
     await Promise.all(waits);
   }finally{globalThis.fetch=previousFetch;if(previousCaches===undefined)delete globalThis.caches;else globalThis.caches=previousCaches;}
 });
+
 

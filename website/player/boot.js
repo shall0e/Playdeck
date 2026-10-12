@@ -278,7 +278,7 @@ const performanceNote=document.createElement('p');
 performanceNote.hidden=true;
 performanceNote.textContent='Full resolution uses your device’s native pixel density. Automatic lowers resolution when frame callbacks fall behind. Maximum speed starts at the smallest viewport. Original desktop compatibility restores the previous device spoofing. Changing this restarts the game; save first. Fixed-resolution engines may ignore these hints.';
 $('#panel').append(performanceNote);
-const cacheNote=document.createElement('p');cacheNote.hidden=true;cacheNote.textContent='Large files stream without a second sandbox copy. A game may keep its own downloads. Existing saved files are retained.';$('#panel').append(cacheNote);
+const cacheNote=document.createElement('p');cacheNote.hidden=true;cacheNote.textContent='Downloaded files are reused on this device. Hash and version checks refresh changed files automatically.';$('#panel').append(cacheNote);
 document.body.classList.toggle('performance-active',performanceMode!=='native');
 // Unified chrome remains blurred; the small toolbar is hidden during normal gameplay.
 const cadenceNote=document.createElement('p');cadenceNote.textContent=performanceMode==='full'?'Full resolution · native pixel density':performanceMode==='native'?'Frame monitoring off in compatibility mode':'Frame cadence: waiting for renderer';cadenceNote.hidden=true;$('#panel').append(cadenceNote);
@@ -397,12 +397,12 @@ function announceMenu(name){document.dispatchEvent(new CustomEvent('timebomb:men
 const controllerMapper=gameURL && !nativeGamepad ? installController({profileId:gameURL.href,getFrame:()=>frame,forceMapping:playerSettings.forceController}) : null;
 requestAnimationFrame(alignMenuPanels);
 function gamePath(prefix) {return location.origin+prefix+gameURL.host+gameURL.pathname+gameURL.search+gameURL.hash;}
-function send(type) {
+function send(type,data={}) {
   return new Promise((resolve,reject)=>{
     const channel=new MessageChannel();
     const timer=setTimeout(()=>{channel.port1.close();reject(new Error('Storage worker did not respond.'));},5000);
     channel.port1.onmessage=event=>{clearTimeout(timer);channel.port1.close();event.data.ok ? resolve(event.data) : reject(new Error(event.data.error));};
-    (navigator.serviceWorker.controller || worker).postMessage({type},[channel.port2]);
+    (navigator.serviceWorker.controller || worker).postMessage({type,...data},[channel.port2]);
   });
 }
 let statsTimer,statsLast=0;
@@ -570,6 +570,7 @@ async function start() {
       function changed(){if(navigator.serviceWorker.controller===worker){cleanup();resolve();}}
       navigator.serviceWorker.addEventListener('controllerchange',changed);changed();
     });
+    await send('sandbox:config',{performance:performanceMode});
   } catch(error) {
     // Third-party storage can be blocked on mobile. The server proxy still runs online.
     worker=null;
@@ -598,6 +599,7 @@ if(gameURL){
 announceSettings();
 if(embedded)parent.postMessage({type:'playdeck:sandbox-ready'},parentOrigin);
 start();
+
 
 
 

@@ -5,6 +5,7 @@ import {decodeS3TC,installS3TC} from './player/s3tc.js';
 const LEGACY_PREFIX = '/__game/';
 const PREFIX = LEGACY_PREFIX + 'v4/';
 const LOCAL_PREFIX = '/player/games/';
+const ASSET_VERSION='hash-cache-1';
 // Wrangler adds __name calls inside serialized functions when keeping names.
 // Supply the helper in the injected realm, isolated from the game's own bindings.
 const INJECTED_NAMES='const __name=(fn,name)=>{try{Object.defineProperty(fn,"name",{value:name,configurable:true});}catch{}return fn;};';
@@ -161,7 +162,7 @@ function upstreamHeaders(request, target) {
   const headers = new Headers();
   // Preserve game protocol headers, never launcher/browser identity headers.
   for (const [name,value] of request.headers) {
-    if (/^(host|cookie|authorization|proxy-.*|connection|keep-alive|transfer-encoding|te|trailer|upgrade|content-length|accept-encoding|origin|referer|sec-.*|cf-.*|x-forwarded-.*|forwarded|true-client-ip)$/i.test(name)) continue;
+    if (/^(host|cookie|authorization|proxy-.*|x-playdeck-.*|connection|keep-alive|transfer-encoding|te|trailer|upgrade|content-length|accept-encoding|origin|referer|sec-.*|cf-.*|x-forwarded-.*|forwarded|true-client-ip)$/i.test(name)) continue;
     headers.set(name,value);
   }
   const prefix = cookiePrefix(target.hostname);
@@ -184,6 +185,8 @@ function proxyHeaders(response, target, prefix = PREFIX) {
   headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
   headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   headers.set('Cache-Control', 'no-cache');
+  if(response.headers.has('etag'))headers.set('X-Playdeck-Source-ETag',response.headers.get('etag'));
+  if(/\bno-store\b/i.test(response.headers.get('cache-control') || ''))headers.set('X-Playdeck-No-Store','1');
   headers.set('X-Timebomb-Proxy-Version', '4');
   headers.set('Access-Control-Allow-Origin', '*');
   headers.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
@@ -193,6 +196,15 @@ function proxyHeaders(response, target, prefix = PREFIX) {
     if (cookie) headers.append('Set-Cookie',cookie);
   }
   return headers;
+}
+// Hosts without validators can still avoid retransmitting rewritten text to
+// the device. Hash after rewriting so the hash identifies the saved bytes.
+export async function contentHashResponse(response,request){
+  const text=await response.text(),headers=new Headers(response.headers);
+  const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),byte=>byte.toString(16).padStart(2,'0')).join('');
+  headers.set('X-Playdeck-Content-Hash',hash);
+  if(request.headers.get('X-Playdeck-Known-Hash')===hash)return new Response(null,{status:304,headers});
+  return new Response(text,{status:response.status,statusText:response.statusText,headers});
 }
 export default {
   async fetch(request, env) {
@@ -233,6 +245,8 @@ export default {
       let target = targetFromProxy(incoming,routePrefix);
       if (!['GET','HEAD','POST','PUT','PATCH','DELETE'].includes(request.method)) return new Response('Unsupported game request method.', {status:405});
       const read = ['GET','HEAD'].includes(request.method);
+      const selected=(request.headers.get('cookie') || '').match(/(?:^|;\s*)tb_performance=(full|auto|fast|native)(?:;|$)/)?.[1] || 'full';
+      const transform=ASSET_VERSION+':'+selected+':'+(['worker','sharedworker'].includes(request.headers.get('sec-fetch-dest'))?request.headers.get('sec-fetch-dest'):'asset');
       let response;
       for (let redirects = 0; redirects <= 5; redirects++) {
         // Runtime URL hooks discover dependencies as the game requests them.
@@ -240,6 +254,10 @@ export default {
         if (!publicHost(target.hostname) || target.username || target.password || target.port || target.protocol !== 'https:' || target.hostname === incoming.hostname || ['timebomb.lol','www.timebomb.lol'].includes(target.hostname))
           return new Response('This game dependency must use a public HTTPS host.', {status:403});
         const headers = upstreamHeaders(request,target);
+        // Old rewrites must be rebuilt even when the upstream file is unchanged.
+        if(local && request.headers.has('X-Playdeck-Transform') && request.headers.get('X-Playdeck-Transform')!==transform){
+          headers.delete('if-none-match');headers.delete('if-modified-since');
+        }
         if(local){
           headers.set('user-agent',DESKTOP_UA);
           headers.set('sec-ch-ua','"Chromium";v="144", "Google Chrome";v="144", "Not_A Brand";v="99"');
@@ -269,10 +287,12 @@ export default {
         redirected.set('Location',proxyURL(destination.href,target.href,incoming.origin,routePrefix));
         return new Response(response.body,{status:response.status,headers:redirected});
       }
-      const selected=(request.headers.get('cookie') || '').match(/(?:^|;\s*)tb_performance=(full|auto|fast|native)(?:;|$)/)?.[1] || 'full';
       const headers = proxyHeaders(response,target,routePrefix);
       if(local)headers.set('X-Timebomb-Desktop','7');
       const type = headers.get('content-type') || '';
+      const rewritten=/(text\/html|text\/css|javascript|ecmascript)/i.test(type);
+      if(local && rewritten)headers.set('X-Playdeck-Transform',transform);
+      const finish=result=>local && response.status===200 && !headers.has('X-Playdeck-Source-ETag') && !headers.has('Last-Modified')?contentHashResponse(result,request):result;
       // Do not buffer null responses, ranges, large payloads, or integrity-checked KSP scripts.
       if (request.method === 'HEAD' || [204,205,304].includes(response.status) || response.status === 206 || (target.hostname === 'kerbalspaceprogram.pages.dev' && /javascript|ecmascript/i.test(type)) || !/(text\/html|text\/css|javascript|ecmascript)/i.test(type))
         return new Response(response.body, {status:response.status,headers});
@@ -281,7 +301,7 @@ export default {
       const base = target.href, origin = incoming.origin;
       if (/text\/html/i.test(type)) {
         let documentBase = base;
-        return new HTMLRewriter()
+        return finish(new HTMLRewriter()
           .on('base', {element(element) {
             const href = element.getAttribute('href');
             if (href) { documentBase = new URL(href, base).href; element.setAttribute('href', proxyURL(documentBase, base, origin,routePrefix)); }
@@ -312,15 +332,16 @@ export default {
             this.buffer = (this.buffer || '') + chunk.text; chunk.remove();
             if (chunk.lastInTextNode) {chunk.after(rewriteCSS(this.buffer, documentBase, origin,routePrefix,selected), {html:true});this.buffer='';}
           }})
-          .transform(clean);
+          .transform(clean));
       }
       let text = await clean.text();
       if (/javascript|ecmascript/i.test(type) && ['worker','sharedworker'].includes(request.headers.get('sec-fetch-dest'))) text = bootstrap(base, origin, true,routePrefix,selected) + '\n' + text;
-      return new Response(/text\/css/i.test(type) ? rewriteCSS(text, base, origin,routePrefix,selected) : /javascript|ecmascript/i.test(type) ? rewriteJS(text, base, origin,routePrefix) : text,
-        {status:response.status, headers});
+      return finish(new Response(/text\/css/i.test(type) ? rewriteCSS(text, base, origin,routePrefix,selected) : /javascript|ecmascript/i.test(type) ? rewriteJS(text, base, origin,routePrefix) : text,
+        {status:response.status, headers}));
     } catch (error) {return new Response('Game proxy unavailable: ' + error.message, {status:502});}
   }
 };
+
 
 
 
