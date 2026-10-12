@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {needsAssetRefresh} from '../website/player/sw.js';
 import {
   localFetch,
   cacheAsset,
@@ -9,6 +10,17 @@ import {
 } from '../website/player/sw.js';
 const origin = 'https://player.example',
   url = origin + '/player/games/game.example/game.bin';
+test('session launches refresh broken documents and stale worker transforms, keeping binary downloads', () => {
+  const prefix = origin + '/player/games/.launch/12345678-abcd/full/101/gameid/game.example/';
+  const page = new Request(prefix + 'index.html');
+  assert.equal(needsAssetRefresh(page, new Response('raw page', {headers:{'Content-Type':'text/html'}})), true);
+  assert.equal(needsAssetRefresh(page, new Response('old page', {headers:{'Content-Type':'text/html','X-Playdeck-Transform':'hash-cache-1:full:asset'}})), true);
+  assert.equal(needsAssetRefresh(page, new Response('current page', {headers:{'Content-Type':'text/html','X-Playdeck-Transform':'deck-runtime-1:runtime-1:asset'}})), false);
+  assert.equal(needsAssetRefresh(new Request(prefix + 'game.bin'), new Response('saved binary')), false);
+  const worker = {url:prefix + 'engine-worker.js', destination:'worker', integrity:''};
+  assert.equal(needsAssetRefresh(worker, new Response('old worker', {headers:{'X-Playdeck-Transform':'deck-runtime-1:runtime-1:asset'}})), true);
+  assert.equal(needsAssetRefresh(worker, new Response('current worker', {headers:{'X-Playdeck-Transform':'deck-runtime-1:runtime-1:worker'}})), false);
+});
 class MemoryCache {
   constructor() {
     this.entries = new Map();
@@ -84,6 +96,19 @@ async function fixture(run) {
     else globalThis.caches = previousCaches;
   }
 }
+test('a session repairs cached raw HTML once without redownloading saved game data', async () =>
+  fixture(async ({data,event,calls,finish,setUpstream}) => {
+    const canonical = origin + '/player/games/game.example/index.html';
+    const launched = origin + '/player/games/.launch/12345678-abcd/full/101/gameid/game.example/index.html';
+    await data.put(canonical, new Response('broken raw HTML', {headers:{'Content-Type':'text/html'}}));
+    await data.put(url, new Response('saved binary'));
+    setUpstream(async () => new Response('repaired HTML', {headers:{'Content-Type':'text/html','X-Playdeck-Transform':'deck-runtime-1:runtime-1:asset','X-Playdeck-Compatibility':'deck-runtime-1'}}));
+    assert.equal(await (await localFetch(new Request(launched),event)).text(), 'repaired HTML');
+    await finish();
+    assert.equal(await (await localFetch(new Request(launched),event)).text(), 'repaired HTML');
+    assert.equal(await (await localFetch(new Request(url),event)).text(), 'saved binary');
+    assert.equal(calls.length,1);
+  }));
 test('saved files load locally on reload, no-cache and no-store without any online checks', async () =>
   fixture(async ({ calls, metadata, event, finish, setUpstream }) => {
     await (await localFetch(new Request(url), event)).text();
@@ -368,3 +393,4 @@ test('raw cached launch HTML recovers automatically without redownloading game b
     assert.equal(await (await localFetch(new Request(url), event)).text(), 'saved binary');
     assert.equal(calls.length, 1);
   }));
+
