@@ -1,6 +1,6 @@
 const PREFIX='/player/games/';
 const CACHE='timebomb-local-games-v1';
-const SHELL='playdeck-local-shell-v23';
+const SHELL='playdeck-local-shell-v24';
 const METADATA='playdeck-local-hashes-v1';
 const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/settings.js','/player/toolbar.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
 const OLD_PREFIX='/__sandbox/games/';
@@ -220,6 +220,23 @@ export async function localFetch(request,event) {
     return new Response('This file has not been downloaded. Reconnect to import it.',{status:503,headers:{'Content-Type':'text/plain','Cross-Origin-Resource-Policy':'cross-origin'}});
   }
 }
+export async function shellFetch(request,event){
+  const url=new URL(request.url),key=url.origin+url.pathname;
+  // Player updates are independent of the permanently local-first game store.
+  try{
+    const response=await fetch(new Request(request,{cache:'no-cache'}));
+    if(response.ok){
+      const copy=response.clone();
+      event.waitUntil(caches.open(SHELL).then(cache=>cache.put(key,copy)).catch(()=>{}));
+      return response;
+    }
+    return (await (await caches.open(SHELL)).match(key)) || response;
+  }catch(error){
+    const saved=await (await caches.open(SHELL)).match(key);
+    if(saved)return saved;
+    throw error;
+  }
+}
 if (typeof self!=='undefined' && self.addEventListener) {
   self.addEventListener('install',event=>event.waitUntil((async()=>{
     const cache=await caches.open(SHELL);
@@ -235,16 +252,7 @@ if (typeof self!=='undefined' && self.addEventListener) {
     if (url.origin!==self.location.origin) return;
     if (url.pathname.startsWith(PREFIX)) event.respondWith(localFetch(event.request,event));
     else if(url.pathname.startsWith('/__game/v4/')) event.respondWith(networkFetch(event.request,event));
-    else if (SHELL_FILES.includes(url.pathname)) event.respondWith((async()=>{
-      try {
-        const cache=await caches.open(SHELL);
-        const saved=await cache.match(url.origin+url.pathname);
-        if(saved)return saved;
-        const response=await fetch(event.request);
-        if (response.ok) {const copy=response.clone();event.waitUntil(caches.open(SHELL).then(cache=>cache.put(url.origin+url.pathname,copy)));}
-        return response;
-      } catch {return (await caches.open(SHELL)).match(url.origin+url.pathname);}
-    })());
+    else if (SHELL_FILES.includes(url.pathname)) event.respondWith(shellFetch(event.request,event));
   });
   self.addEventListener('message',event=>{
     if (!event.source || new URL(event.source.url).pathname!=='/player/') return;

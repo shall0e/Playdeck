@@ -553,7 +553,7 @@ async function start() {
     for(const old of await navigator.serviceWorker.getRegistrations()) {
       if([location.origin+'/player/',location.origin+'/__sandbox/'].includes(old.scope)) await old.unregister();
     }
-    const registration=await navigator.serviceWorker.register('/player/sw.js',{scope:'/',type:'module'});
+    const registration=await navigator.serviceWorker.register('/player/sw.js',{scope:'/',type:'module',updateViaCache:'none'});
     // Wait for the new worker instead of sending new messages to an old controller.
     const next=registration.installing || registration.waiting;
     if(next && next.state!=='activated') await new Promise((resolve,reject)=>{

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {localFetch,cacheAsset,MAX_CACHE_BYTES,cachedRange} from '../website/player/sw.js';
+import {localFetch,cacheAsset,MAX_CACHE_BYTES,cachedRange,shellFetch} from '../website/player/sw.js';
 const origin='https://player.example',url=origin+'/player/games/game.example/game.bin';
 class MemoryCache{
   constructor(){this.entries=new Map();}
@@ -99,3 +99,24 @@ test('storage errors and interrupted transfers leave the live game stream workin
   await Promise.all(waits);assert.equal(await data.match(request),undefined);
 });
 
+
+test('player code updates replace old UI cache while saved game bytes stay local',async()=>fixture(async({data,event,finish,calls,setUpstream})=>{
+  const script=origin+'/player/boot.js';
+  await data.put(script,new Response('old UI'));
+  await data.put(url,new Response('saved game'));
+  setUpstream(async request=>{assert.equal(request.cache,'no-cache');return new Response('new UI with icons');});
+  assert.equal(await (await shellFetch(new Request(script+'?v=player-updates-1'),event)).text(),'new UI with icons');
+  await finish();
+  assert.equal(await (await data.match(script)).text(),'new UI with icons');
+  assert.equal(await (await localFetch(new Request(url,{cache:'reload'}),event)).text(),'saved game');
+  assert.equal(calls.length,1);
+}));
+test('player UI still works offline and failed updates cannot replace its last good files',async()=>fixture(async({data,event,setUpstream})=>{
+  const script=origin+'/player/boot.js';
+  await data.put(script,new Response('working UI'));
+  setUpstream(async()=>{throw new Error('Offline');});
+  assert.equal(await (await shellFetch(new Request(script),event)).text(),'working UI');
+  setUpstream(async()=>new Response('server error',{status:503}));
+  assert.equal(await (await shellFetch(new Request(script),event)).text(),'working UI');
+  assert.equal(await (await data.match(script)).text(),'working UI');
+}));
