@@ -7,8 +7,7 @@
       "image": "https://preview.redd.it/what-are-your-opinions-on-waw-zombies-and-do-you-feel-that-v0-zbeadldlqun81.jpg?width=619&format=pjpg&auto=webp&s=363a1c6bd510575a90253f74946fb437e0bf1a1a",
       "playUrl": "https://vel.gg/bo1z",
       "description": "Play COD BO1 Zombies online for free.",
-      "openInNewTab": true,
-      "displayOptions": true
+      "openInNewTab": true
     },
     {
       "image": "https://i.ytimg.com/vi/jwCKCu3I8tk/maxresdefault.jpg",
@@ -37,24 +36,11 @@
       "displayOptions": true
     },
     {
-      "image": "https://m.media-amazon.com/images/I/71Pib7x9NbL.jpg",
-      "playUrl": "https://irv77.github.io/hd_fnaf/3/",
-      "name": "Five Night's At Freddy's 3",
-      "description": "FNAF 3 completely ported to browser.",
-      "displayOptions": true
-    },
-    {
       "image": "https://images.gamegator.net/co8efh",
       "playUrl": "https://irv77.github.io/hd_fnaf/4/",
       "name": "Five Night's At Freddy's 4",
       "description": "FNAF 4 completely ported to browser.",
       "displayOptions": true
-    },
-    {
-      "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/738060/capsule_616x353.jpg?t=1512422259",
-      "playUrl": "https://irv77.github.io/hd_fnaf/ps/",
-      "name": "Five Night's At Freddy's Pizzeria Simulator",
-      "description": "FNAF Pizzeria Simulator completely ported to browser."
     },
     {
       "image": "https://images.squarespace-cdn.com/content/v1/6983d2b9cde8d50f1d1674c7/1771395829203-3G72OQSEWG67ZGIAO2K1/PVZ2.jpg",
