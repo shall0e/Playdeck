@@ -38,7 +38,7 @@ test('sandbox upstream requests present desktop UA and consistent client hints',
   try {
     const response=await worker.fetch(new Request('https://playdeck-1z1.pages.dev/player/games/game.example/data.bin',{headers:{'User-Agent':'Mobile Android','Sec-CH-UA-Mobile':'?1'}}),{});
     assert.equal(sent.get('user-agent'),DESKTOP_UA);assert.equal(sent.get('sec-ch-ua-mobile'),'?0');assert.equal(sent.get('sec-ch-ua-platform'),'"Windows"');
-    assert.equal(response.headers.get('X-Timebomb-Desktop'),'6');
+    assert.equal(response.headers.get('X-Timebomb-Desktop'),'7');
   } finally {globalThis.fetch=previous;}
 });
 test('desktop pointer media queries change only in sandbox styles',()=>{
