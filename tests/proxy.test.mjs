@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import {recoverGameRequest} from '../website/player/session.js';
+import {recoverAssetRequest} from '../website/player/sw.js';
 import worker, {
   bootstrap,
   proxyURL,
@@ -412,4 +414,30 @@ test('escaped root asset requests recover through the requesting game sandbox', 
     assert.deepEqual(await response.json(),{packs:[]});
     assert.equal(calls[0],'https://zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.json');
   } finally {globalThis.fetch=originalFetch;}
+});
+
+test('native root asset requests recover using referrer when client is launcher or worker', () => {
+  const request=new Request(origin+'/packs/zm_transit/dist/manifest.json');
+  const client=origin+'/player/';
+  const game=origin+'/player/games/.launch/12345678-abcd/full/101/gameid/zombies.mdelworkstation.cc/index.html';
+  const routed=recoverGameRequest(request,[client,game]);
+  assert.equal(new URL(routed.url).pathname,'/player/games/.launch/12345678-abcd/full/101/gameid/zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.json');
+});
+test('unrelated source requests remain untouched without game context', () => {
+  const request=new Request(origin+'/packs/zm_transit/dist/manifest.json');
+  assert.equal(recoverGameRequest(request,[origin+'/player/',origin+'/']).url,request.url);
+});
+test('asset fetch fallback uses only the initiating launcher session and keeps player shell local', () => {
+  const session={
+    session:'12345678-abcd',game:'gameid',
+    prefix:'/player/games/.launch/12345678-abcd/full/101/gameid/',
+    sourceURL:'https://zombies.mdelworkstation.cc/'
+  };
+  const request=new Request(origin+'/packs/zm_transit/dist/manifest.json');
+  const routed=recoverAssetRequest(request,{clientURL:origin+'/player/?url=https%3A%2F%2Fzombies.mdelworkstation.cc%2F',session});
+  assert.equal(new URL(routed.url).pathname,session.prefix+'zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.json');
+  const unrelated=recoverAssetRequest(new Request(origin+'/player/version.js'),{clientURL:origin+'/player/',session});
+  assert.equal(new URL(unrelated.url).pathname,'/player/version.js');
+  const invalid=recoverAssetRequest(request,{clientURL:origin+'/player/',session:{...session,game:'another'}});
+  assert.equal(invalid.url,request.url);
 });

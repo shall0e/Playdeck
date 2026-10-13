@@ -831,7 +831,7 @@ function send(type, data = {}) {
       channel.port1.close();
       event.data.ok ? resolve(event.data) : reject(new Error(event.data.error));
     };
-    (navigator.serviceWorker.controller || worker).postMessage({ type, session:launchSession?.id,game:launchSession?.game,performance:performanceMode,keepDownloaded:!!(gameURL && profiles()[gameId(gameURL.href)]?.downloadPinned),...data }, [channel.port2]);
+    (navigator.serviceWorker.controller || worker).postMessage({ type, session:launchSession?.id,game:launchSession?.game,routePrefix:launchSession?.prefix,performance:performanceMode,keepDownloaded:!!(gameURL && profiles()[gameId(gameURL.href)]?.downloadPinned),...data }, [channel.port2]);
   });
 }
 let statsTimer,

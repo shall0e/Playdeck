@@ -37,18 +37,30 @@ export function telemetryChannel(context,source) {
   return context.session ? 'playdeck-performance:'+context.session : 'timebomb-performance:'+new URL(source).origin;
 }
 
-export function recoverGameRequest(request, clientURL) {
+// Native browser loaders can escape the injected fetch/XHR hooks. Recover
+// root-relative game resources from the initiating game frame, not the site root.
+// A request may have multiple candidate clients (e.g. a worker and its referrer).
+export function recoverGameRequest(request, clientURLs) {
   try {
-    const incoming = new URL(request.url), client = new URL(clientURL);
-    if (incoming.origin !== client.origin || incoming.pathname.startsWith(GAME_PREFIX) || incoming.pathname.startsWith('/__game/')) return request;
-    const context = proxyContext(client.pathname);
-    const prefix = client.pathname.startsWith(GAME_PREFIX) ? context.prefix : client.pathname.startsWith('/__game/v4/') ? '/__game/v4/' : null;
-    if (!prefix) return request;
-    const host = client.pathname.slice(prefix.length).split('/')[0];
-    if (!host || !host.includes('.')) return request;
-    incoming.pathname = prefix + host + incoming.pathname;
-    const headers = new Headers(request.headers);
-    headers.set('X-Playdeck-Destination', request.destination || headers.get('X-Playdeck-Destination') || headers.get('sec-fetch-dest') || 'empty');
-    return new Request(incoming, {...{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:request.redirect,credentials:request.credentials,cache:request.cache,integrity:request.integrity,signal:request.signal},mode:request.mode==='navigate'?'same-origin':request.mode,...(!['GET','HEAD'].includes(request.method)?{duplex:'half'}:{})});
-  } catch { return request; }
+    const original = new URL(request.url);
+    if (original.pathname.startsWith(GAME_PREFIX) || original.pathname.startsWith('/__game/')) return request;
+    const candidates = Array.isArray(clientURLs) ? clientURLs : [clientURLs];
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      let client;
+      try { client = new URL(candidate); } catch { continue; }
+      if (original.origin !== client.origin) continue;
+      const context = proxyContext(client.pathname);
+      const prefix = client.pathname.startsWith(GAME_PREFIX) ? context.prefix : client.pathname.startsWith('/__game/v4/') ? '/__game/v4/' : null;
+      if (!prefix) continue;
+      const host = client.pathname.slice(prefix.length).split('/')[0];
+      if (!host || !/^[a-z0-9.-]+$/i.test(host) || !host.includes('.')) continue;
+      const incoming = new URL(original);
+      incoming.pathname = prefix + host + original.pathname;
+      const headers = new Headers(request.headers);
+      headers.set('X-Playdeck-Destination', request.destination || headers.get('X-Playdeck-Destination') || headers.get('sec-fetch-dest') || 'empty');
+      return new Request(incoming, {...{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:request.redirect,credentials:request.credentials,cache:request.cache,integrity:request.integrity,signal:request.signal},mode:request.mode==='navigate'?'same-origin':request.mode,...(!['GET','HEAD'].includes(request.method)?{duplex:'half'}:{})});
+    }
+  } catch {}
+  return request;
 }

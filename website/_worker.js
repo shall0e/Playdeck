@@ -7,7 +7,7 @@ export {installPerformance as installMobilePerformance} from './player/performan
 
 export default {
   async fetch(request, env) {
-    request = recoverGameRequest(request,request.headers.get('referer') || request.referrer);
+    request = recoverGameRequest(request,[request.headers.get('referer'),request.referrer]);
     const incoming = new URL(request.url);
     if(incoming.pathname==='/player/worker-version.json')return Response.json({revision:BUILD_REVISION,features:FEATURE_RELEASE,compatibility:'deck-runtime-1'},{headers:{'Cache-Control':'no-store','Cross-Origin-Resource-Policy':'cross-origin'}});
     const oldPlayerRoute=['/__sandbox','/_sandbox'].find(path=>incoming.pathname===path || incoming.pathname.startsWith(path+'/'));
@@ -33,7 +33,16 @@ export default {
     const routePrefix = local ? launchContext.prefix : PREFIX;
     if (!local && !incoming.pathname.startsWith(LEGACY_PREFIX)) {
       const response=await env.ASSETS.fetch(request);
-      if(!incoming.pathname.startsWith('/player/')) return response;
+      if(!incoming.pathname.startsWith('/player/')) {
+         // A missing game asset must never masquerade as a successful JSON or
+         // binary download because Pages served its HTML fallback.
+         if (/\.(?:json|wasm|bin|data|pak|pk3|zip)(?:$)/i.test(incoming.pathname) &&
+             /text\/html/i.test(response.headers.get('content-type') || ''))
+           return new Response('Unrouted game asset: the request did not include its game session.',{
+             status:404,headers:{'Content-Type':'text/plain','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'}
+           });
+         return response;
+       }
       const headers=new Headers(response.headers);
       headers.delete('X-Frame-Options');
       headers.set('Cross-Origin-Resource-Policy','cross-origin');

@@ -19,6 +19,27 @@ export class DownloadActivity {
 }
 const sessions=new Map(),clientSessions=new Map(),sessionOptions=new Map(),inflight=new Map();
 const metadataWrites=new Map();
+// The launcher supplies its exact game route to recover native root-path fetches
+// that originate in its document or in a worker without a usable referrer.
+export function recoverAssetRequest(request,{clientURL,referrer,session}={}) {
+  const candidates=[clientURL,referrer];
+  if(session?.prefix && session?.sourceURL) {
+    try {
+      const context=proxyContext(session.prefix+'source.example/');
+      const source=new URL(session.sourceURL);
+      const requested=new URL(request.url);
+      const client=new URL(clientURL || '');
+      if(context.prefix===session.prefix && context.session===session.session &&
+         context.game===session.game && source.protocol==='https:' && !source.username &&
+         !source.password && !source.port && client.origin===requested.origin &&
+         client.pathname==='/player/' && !requested.pathname.startsWith('/player/') &&
+         !requested.pathname.startsWith('/__game/') && !['/','/home.css','/home.js','/games.json','/favicon.ico'].includes(requested.pathname)) {
+        candidates.push(requested.origin+session.prefix+source.host+source.pathname);
+      }
+    } catch {}
+  }
+  return recoverGameRequest(request,candidates);
+}
 function sessionActivity(request){const session=proxyContext(new URL(request.url).pathname).session;if(!session)return downloads;if(!sessions.has(session))sessions.set(session,new DownloadActivity(data=>void inform({...data,session})));return sessions.get(session);}
 export const downloads=new DownloadActivity(message=>{if(typeof self!=='undefined') void inform(message);});
 export async function networkFetch(request,event) {
@@ -297,7 +318,7 @@ if (typeof self!=='undefined' && self.addEventListener) {
     event.respondWith((async()=>{
       // Native fetch references, module paths and engine loaders can bypass page hooks.
       const client=event.clientId ? await self.clients.get(event.clientId) : null;
-      const request=recoverGameRequest(event.request,client?.url || event.request.referrer);
+      const request=recoverAssetRequest(event.request,{clientURL:client?.url,referrer:event.request.referrer,session:clientSessions.get(event.clientId)});
       const routed=new URL(request.url);
       if(routed.pathname.startsWith(PREFIX))return localFetch(request,event);
       if(routed.pathname.startsWith('/__game/v4/'))return networkFetch(request,event);
@@ -310,7 +331,11 @@ if (typeof self!=='undefined' && self.addEventListener) {
     const port=event.ports[0];
     event.waitUntil((async()=>{
       const sourceURL=new URL(event.source.url);
-      if(event.data?.session)clientSessions.set(event.source.id,{session:event.data.session,game:event.data.game});
+      if(event.data?.session)clientSessions.set(event.source.id,{
+        session:event.data.session,game:event.data.game,
+        prefix:event.data.routePrefix,
+        sourceURL:sourceURL.searchParams.get('url')
+      });
       const scope=gameCacheScope(sourceURL.searchParams.get('url'),sourceURL.origin);
       if(event.data?.type==='sandbox:version'){port?.postMessage({ok:true,revision:BUILD_REVISION,features:FEATURE_RELEASE,compatibility:'deck-runtime-1',shell:SHELL});
       } else if (event.data?.type==='sandbox:config') {
