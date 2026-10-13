@@ -236,10 +236,10 @@ body > #panel :is(summary,button,select,input,textarea):is(:focus,:focus-visible
 /* Stable panel animations: opacity and vertical movement only. No scale,
    transformed toolbar children, or clipped details-content during interaction. */
 :root {
-  --playdeck-control-bg: rgba(255,255,255,.095);
-  --playdeck-field-bg: rgba(255,255,255,.075);
-  --playdeck-control-hover-bg: rgba(255,255,255,.16);
-  --playdeck-control-active-bg: rgba(255,255,255,.21);
+  --playdeck-control-bg: transparent;
+  --playdeck-field-bg: transparent;
+  --playdeck-control-hover-bg: transparent;
+  --playdeck-control-active-bg: transparent;
 }
 :root[data-playdeck-appearance='transparent'] {
   --playdeck-control-bg: transparent;
@@ -259,7 +259,7 @@ body > #panel summary,
 #toolbar-restore {
   background: var(--playdeck-control-bg) !important;
   box-shadow: none !important;
-  transition:background-color 130ms ease,color 130ms ease,opacity 130ms ease!important;
+  transition:color 120ms ease,opacity 120ms ease,text-shadow 120ms ease!important;
 }
 #game-menu-bar .game-menu summary:hover,
 #game-menu-bar .game-display summary:hover,
@@ -284,7 +284,7 @@ body > #panel select,
 body > #panel input:not([type=checkbox]):not([type=range]),
 body > #panel textarea,
 #tv-cast select,.deck-modal select,.deck-modal input,.deck-modal textarea{
-  background-color:var(--playdeck-field-bg)!important;
+  background:var(--playdeck-field-bg)!important;
 }
 #game-menu-bar .display-panel select:hover,
 body > #panel select:hover,
