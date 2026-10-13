@@ -328,7 +328,7 @@ if (typeof self!=='undefined' && self.addEventListener) {
       // page's fetch/XHR hooks. Catch outgoing traffic at the service worker.
       const client=event.clientId ? await self.clients.get(event.clientId) : null;
       let clientURL=client?.url;
-      if(event.clientId && (!clientURL || /^(?:blob:|about:|data:)/i.test(clientURL))){
+      if(!clientURL || /^(?:blob:|about:|data:)/i.test(clientURL)){
         const frames=await self.clients.matchAll({type:'window'});
         clientURL=gameRequestClient(clientURL,frames.map(frame=>frame.url));
       }
