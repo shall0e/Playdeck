@@ -132,7 +132,17 @@ export function installSettings(
       status.textContent = error.message;
     }
   }
-  field('appearance').addEventListener('change', save);
+  const applyAppearance = () => {
+    // Paint the selected style before saving. This also works when browser
+    // storage is unavailable or a different preference is invalid.
+    document.documentElement.dataset.playdeckAppearance =
+      field('appearance').value === 'transparent' ? 'transparent' : 'glass';
+  };
+  field('appearance').addEventListener('input', applyAppearance);
+  field('appearance').addEventListener('change', () => {
+    applyAppearance();
+    save();
+  });
   field('forceController').addEventListener('change', save);
   field('panicURL').addEventListener('change', save);
   field('panicKey').addEventListener('keydown', (event) => {

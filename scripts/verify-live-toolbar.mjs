@@ -95,6 +95,11 @@ try {
     const glassAlpha = Number(glass.slice(glass.lastIndexOf(',')+1).replace(')','').trim());
     assert(glassAlpha > 0, 'Glass buttons remain transparent: ' + glass);
     await appearance.selectOption('transparent');
+    console.log('Appearance selection', JSON.stringify(await root.locator('html').evaluate(html => ({
+      theme:html.dataset.playdeckAppearance,
+      selected:document.querySelector('#player-settings [name="appearance"]')?.value,
+      status:document.querySelector('[data-settings-status]')?.textContent
+    }))));
     const transparent = await button.evaluate(el => getComputedStyle(el).backgroundColor);
     assert.equal(transparent, 'rgba(0, 0, 0, 0)', 'Transparent buttons have a fill');
     await appearance.selectOption('glass');
