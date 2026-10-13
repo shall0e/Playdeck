@@ -32,6 +32,7 @@ let playerSettings = {
     !nativeGamepad &&
     (launch.forceController ?? readGameSettings(params.get('url')).forceController),
 };
+document.documentElement.dataset.playdeckAppearance = playerSettings.appearance;
 const embedded = window.parent !== window;
 function announceSettings() {
   if (embedded)
@@ -1103,15 +1104,7 @@ function mount(url) {
     } catch {}
     watchGameLifecycle();
     try {
-      frame.contentDocument.addEventListener(
-        'pointerdown',
-        () => {
-          closeSandboxPanel();
-          gameMenu.open = false;
-          if (displayMenu) displayMenu.open = false;
-        },
-        true,
-      );
+      // Toolbar.attach listens within the game document and dismisses every menu.
       cleanGameDocument(frame.contentDocument);
     } catch {}
     configChild();deck?.mounted();
@@ -1275,6 +1268,7 @@ installSettings(
   playerSettings,
   (next) => {
     playerSettings = next;
+    document.documentElement.dataset.playdeckAppearance = next.appearance;
     panicBind = next.panicBind;
     controllerMapper?.setForceMapping(next.forceController);
     configChild();
