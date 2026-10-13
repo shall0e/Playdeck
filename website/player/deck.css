@@ -370,3 +370,9 @@ body label > input:is([type=checkbox],[type=radio]) {width:14px;height:14px;marg
   body select:open::picker-icon {rotate:270deg}
 }
 @media(prefers-reduced-motion:reduce) {body summary::before,#badge::before,body select::picker-icon {transition:none!important}}
+
+/* Toolbar actions already have Lucide icons; disclosures belong inside panels. */
+#game-menu-bar > details > summary::before,
+#game-menu-bar #badge::before {content:none!important;display:none!important}
+#game-menu-bar .game-menu-panel.playdeck-js-motion,
+#game-menu-bar .display-panel.playdeck-js-motion {animation:none!important}

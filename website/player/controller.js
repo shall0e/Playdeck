@@ -719,6 +719,8 @@ export function installController({ profileId, getFrame, forceMapping = false })
       #panel select:open::picker-icon {rotate:270deg}
     }
     @media(prefers-reduced-motion:reduce) {#toggle::before,#panel summary::before,#panel select::picker-icon {transition:none!important}}
+
+    #toggle::before {content:none!important;display:none!important}
 </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
   <section id="panel" hidden aria-label="Controller settings"><header><h2>Controller mapping</h2></header>
   <p id="status" role="status">Connect a controller and press a button.</p>

@@ -40,3 +40,6 @@
 - Checkbox and radio rows place the control on the left and its text on the right.
 - All toolbar menu panels share the toolbar center. Use the shared menu-width token for Controller placement.
 - New display-options sessions default to Screen (internal ratio auto). Label 16:9 plainly and preserve its actual aspect ratio.
+
+- Toolbar buttons keep their Lucide action icons without disclosure chevrons. Disclosure indicators remain on dropdowns and collapsible sections inside panels.
+- Menu and Display panel animations run after native details opening; their reverse animation completes before closing details or retracting the toolbar. Keep reduced-motion behavior and horizontal centering intact.

@@ -12,6 +12,35 @@ export function installToolbar(bar, settingsPanel, {getFrame, alwaysVisible = fa
   let hideTimer, closeTimer, closing = null, pointerOver = false, blockHoverReveal = false;
   const reducedMotion = () =>
     typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motions = new WeakMap();
+  function stopPanelMotion(panel) {
+    motions.get(panel)?.cancel();
+    motions.delete(panel);
+  }
+  function animateDetailsPanel(panel, exiting = false) {
+    stopPanelMotion(panel);
+    if(reducedMotion() || typeof panel.animate !== 'function')return;
+    panel.classList.add('playdeck-js-motion');
+    const hidden={opacity:0,filter:'blur(5px)',translate:'0 6px'};
+    const visible={opacity:1,filter:'blur(0px)',translate:'0 0'};
+    const motion=panel.animate(exiting?[visible,hidden]:[hidden,visible],{
+      duration:exiting?MENU_EXIT_MS:180,easing:exiting?'ease-in':'ease-out',fill:'both'
+    });
+    motions.set(panel,motion);
+    motion.finished.then(()=>{
+      if(!exiting && motions.get(panel)===motion)stopPanelMotion(panel);
+    }).catch(()=>{});
+  }
+  // Native details toggles can skip CSS entry animations. Start motion after
+  // the content becomes visible, including Display menus added after startup.
+  bar.addEventListener('toggle',event=>{
+    const details=event.target;
+    if(!details.matches?.('.game-menu,.game-display'))return;
+    const panel=details.querySelector('.display-panel,.game-menu-panel');
+    if(!panel)return;
+    if(details.open && !panel.classList.contains('playdeck-closing'))animateDetailsPanel(panel);
+    else if(!details.open)stopPanelMotion(panel);
+  },true);
   const entries = () => [
     {
       name: 'sandbox',
@@ -84,9 +113,13 @@ export function installToolbar(bar, settingsPanel, {getFrame, alwaysVisible = fa
       }else scheduleHide();
       return;
     }
-    for(const entry of selected) entry.panel.classList?.add('playdeck-closing');
+    for(const entry of selected) {
+      entry.panel.classList?.add('playdeck-closing');
+      if(entry.name==='game' || entry.name==='display')animateDetailsPanel(entry.panel,true);
+    }
     const finish = () => {
       for(const entry of selected) {
+        stopPanelMotion(entry.panel);
         entry.panel.classList?.remove('playdeck-closing');
         entry.finish();
       }

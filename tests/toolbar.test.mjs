@@ -9,7 +9,7 @@ test('edge toolbar hides by default, reveals on hover or tap, and stays open for
       this.attrs = {};
       this.hidden = true;
       this.classes = new Set();
-      this.classList = { add: (c) => this.classes.add(c), remove: (c) => this.classes.delete(c) };
+      this.classList = { add: (c) => this.classes.add(c), remove: (c) => this.classes.delete(c), contains: (c) => this.classes.has(c) };
       this.children = [];
       this.inert = false;
     }
@@ -88,7 +88,17 @@ test('edge toolbar hides by default, reveals on hover or tap, and stays open for
     // A game iframe click must close every menu, not leave the game paused.
     panel.hidden = false;
     details.open = true;
+    const popup = new Element(), animations = [];
+    let cancelled = 0;
+    popup.animate = (frames, options) => {animations.push({frames,options});return {finished:new Promise(()=>{}),cancel(){cancelled++;}};};
+    details.querySelector = () => popup;
+    details.matches = selector => selector === '.game-menu,.game-display';
+    bar.fire('toggle',{target:details});
+    assert.equal(animations[0].frames[0].opacity,0);
+    assert.equal(animations[0].options.duration,180);
     child.fire('pointerdown');
+    assert.equal(animations[1].frames[0].opacity,1);
+    assert.equal(animations[1].options.duration,210);
     // First the menu retracts, then and only then does the toolbar disappear.
     assert.equal(panel.hidden, false);
     assert.equal(bar.classes.has('is-visible'), true);
@@ -98,6 +108,7 @@ test('edge toolbar hides by default, reveals on hover or tap, and stays open for
     t.mock.timers.tick(1);
     assert.equal(panel.hidden, true);
     assert.equal(details.open, false);
+    assert.equal(cancelled,2);
     assert.equal(badge.attrs['aria-expanded'], 'false');
     assert.equal(dismissed, 1);
     assert.equal(bar.classes.has('is-visible'), false);
