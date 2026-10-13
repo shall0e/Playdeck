@@ -61,3 +61,109 @@ body textarea:focus-visible,
   box-shadow: none !important;
 }
 .deck-modal button { font: inherit; padding: 8px 12px; }
+
+/* Unified appearance for the toolbar and every player menu. */
+:root {
+  --playdeck-menu-surface:rgba(30,30,30,.79);
+  --playdeck-menu-blur:blur(18px);
+  --playdeck-menu-shadow:0 8px 30px #0005;
+  --playdeck-control-surface:rgba(255,255,255,.055);
+  --playdeck-field-surface:rgba(255,255,255,.085);
+  --playdeck-control-hover:rgba(255,255,255,.125);
+  --playdeck-control-active:rgba(255,255,255,.16);
+}
+:root[data-playdeck-appearance='transparent'] {
+  --playdeck-menu-surface:transparent;
+  --playdeck-menu-blur:none;
+  --playdeck-menu-shadow:none;
+  --playdeck-control-surface:transparent;
+  --playdeck-field-surface:transparent;
+  --playdeck-control-hover:rgba(255,255,255,.12);
+  --playdeck-control-active:rgba(255,255,255,.17);
+}
+/* Entire surfaces change together. Menus remain legible above game content. */
+#game-menu-bar .game-menu-panel,
+#game-menu-bar .display-panel,
+body > #panel,
+#tv-cast,
+.deck-modal {
+  background:var(--playdeck-menu-surface)!important;
+  backdrop-filter:var(--playdeck-menu-blur)!important;
+  -webkit-backdrop-filter:var(--playdeck-menu-blur)!important;
+  box-shadow:var(--playdeck-menu-shadow)!important;
+  border:0!important;border-radius:12px!important;
+  font:400 13px/1.5 var(--player-font)!important;
+  color:var(--player-text)!important;
+}
+#game-menu-bar .game-menu-panel{padding:8px!important}
+#game-menu-bar .display-panel{padding:14px!important}
+#game-menu-bar .display-panel h2,
+body > #panel h2,#tv-cast h2,.deck-modal h2 {
+  font:500 14px/1.4 var(--player-font)!important;letter-spacing:0!important
+}
+#game-menu-bar .display-panel label,
+body > #panel label,#tv-cast label {font:400 12px/1.5 var(--player-font)!important}
+#game-menu-bar .game-menu summary,
+#game-menu-bar .game-display summary,
+#game-menu-bar #badge,
+#toolbar-restore,
+body button:not(#toolbar-edge),
+body > #panel .deck-section summary {
+  border:0!important;
+  background:var(--playdeck-control-surface)!important;
+  color:var(--player-text)!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  transition:background-color 150ms ease,color 150ms ease,opacity 150ms ease!important;
+}
+body > #panel .deck-section summary{padding:9px 10px!important;border-radius:9px}
+#game-menu-bar .game-menu summary:hover,
+#game-menu-bar .game-display summary:hover,
+#game-menu-bar #badge:hover,
+#toolbar-restore:hover,
+body button:not(#toolbar-edge):not(:disabled):hover,
+body > #panel .deck-section summary:hover {
+  background:var(--playdeck-control-hover)!important;color:#fff!important
+}
+#game-menu-bar .game-menu[open]>summary,
+#game-menu-bar .game-display[open]>summary,
+#game-menu-bar #badge[aria-expanded='true'],
+body button:not(#toolbar-edge):active {
+  background:var(--playdeck-control-active)!important
+}
+#game-menu-bar .game-menu-panel button,
+#game-menu-bar .display-panel button,
+body > #panel button{min-height:34px!important;border-radius:9px!important}
+#game-menu-bar .game-menu-panel button{min-height:40px!important;text-align:left}
+#game-menu-bar .display-panel select,
+body > #panel select,
+body > #panel input:not([type='checkbox']):not([type='range']),
+body > #panel textarea,
+#tv-cast select,.deck-modal select,.deck-modal input,.deck-modal textarea{
+  border:0!important;border-radius:9px!important;
+  background:var(--playdeck-field-surface)!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  color:var(--player-text)!important;
+  font:400 12px/1.4 var(--player-font)!important;min-height:34px;
+  transition:background-color 150ms ease!important
+}
+#game-menu-bar .display-panel select:hover,
+body > #panel select:hover,
+body > #panel input:not([type='checkbox']):hover,
+#tv-cast select:hover,.deck-modal select:hover {
+  background:var(--playdeck-control-hover)!important
+}
+#game-menu-bar .game-menu summary:focus-visible,
+#game-menu-bar .game-display summary:focus-visible,
+#game-menu-bar #badge:focus-visible,
+#toolbar-restore:focus-visible,
+body button:focus-visible,
+body > #panel .deck-section summary:focus-visible,
+body select:focus-visible,body input:focus-visible,body textarea:focus-visible {
+  outline:2px solid #ddd!important;outline-offset:2px!important
+}
+@media(prefers-reduced-motion:reduce) {
+  #game-menu-bar summary,body button,body select,
+  body > #panel .deck-section summary {transition:none!important}
+}
