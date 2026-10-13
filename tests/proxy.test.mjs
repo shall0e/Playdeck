@@ -468,3 +468,23 @@ test('server proxy recovers root manifest from launcher referrer if service work
     assert.equal(calls[0],'https://zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.json');
   } finally {globalThis.fetch=originalFetch;}
 });
+
+test('generated blob workers rewrite engine network requests before fetching packs',async()=>{
+  const blobs=new Map(),calls=[];
+  class MockURL extends URL {
+    static createObjectURL(blob){const url='blob:'+origin+'/'+(blobs.size+1);blobs.set(url,blob);return url;}
+    static revokeObjectURL(url){blobs.delete(url);}
+  }
+  class MockWorker {
+    constructor(url){this.url=url;this.script=blobs.get(url);}
+  }
+  const realm=vm.createContext({URL:MockURL,Blob,Request,Worker:MockWorker,fetch:()=>Promise.resolve(new Response('ok'))});
+  vm.runInContext(bootstrap('https://zombies.mdelworkstation.cc/',origin,true),realm);
+  const source=realm.URL.createObjectURL(new Blob(["fetch('/packs/zm_transit/dist/manifest.json')"],{type:'text/javascript'}));
+  const instance=new realm.Worker(source);
+  const script=await instance.script.text();
+  assert.ok(script.includes('__playdeckMap'));
+  const runtime=vm.createContext({URL:MockURL,Blob,Request,fetch:value=>{calls.push(value);return Promise.resolve(new Response('ok'));}});
+  vm.runInContext(script,runtime);
+  assert.equal(calls[0],origin+'/__game/v4/zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.json');
+});
