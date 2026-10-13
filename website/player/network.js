@@ -34,6 +34,13 @@ export function installNetworkProxy(base, origin, prefix, workerPrelude, resolve
     } catch { return value; }
   };
   globalThis.__playdeckMap=map;
+  // Worklets have their own module-loading API, independent of fetch/Worker.
+  if (globalThis.Worklet?.prototype?.addModule) {
+    const addModule=globalThis.Worklet.prototype.addModule;
+    globalThis.Worklet.prototype.addModule=function(url,...options) {
+      return addModule.call(this,map(url),...options);
+    };
+  }
   const nativeFetch = globalThis.fetch.bind(globalThis);
   globalThis.fetch = (input, options) => nativeFetch(input instanceof Request ? new Request(map(input.url), input) : map(input), options);
   if (typeof XMLHttpRequest !== 'undefined') {

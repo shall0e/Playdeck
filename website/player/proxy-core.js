@@ -12,7 +12,7 @@ import {installCookieNamespace,restoreCookie} from './cookies.js';
 const LEGACY_PREFIX = '/__game/';
 const PREFIX = LEGACY_PREFIX + 'v4/';
 const LOCAL_PREFIX = '/player/games/';
-const ASSET_VERSION='deck-network-4';
+const ASSET_VERSION='deck-network-5';
 // Wrangler adds __name calls inside serialized functions when keeping names.
 // Supply the helper in the injected realm, isolated from the game's own bindings.
 const INJECTED_NAMES='const __name=(fn,name)=>{try{Object.defineProperty(fn,"name",{value:name,configurable:true});}catch{}return fn;};';
@@ -123,7 +123,7 @@ export function bootstrap(base, origin, worker = false, prefix = PREFIX, mode='a
   const performance=local?'('+installPerformance.toString()+')(context.mode,context.session?"playdeck-performance:"+context.session:'+JSON.stringify('timebomb-performance:'+new URL(base).origin)+');':'';
   const networkHelpers=','+proxyURL.toString()+','+targetFromProxy.toString();
   const workerPrelude='(()=>{'+INJECTED_NAMES+'('+CLIENT_HOOK+')('+params+',null'+networkHelpers+');})();';
-  const script='(()=>{if(globalThis.__playdeckProxyInstalled)return;globalThis.__playdeckProxyInstalled=true;'+INJECTED_NAMES+context+runtime+identity+desktop+performance+pointer+s3tcBootstrap(base,prefix)+'('+installCookieNamespace.toString()+')('+params+','+targetFromProxy.toString()+');('+CLIENT_HOOK+')('+params+','+JSON.stringify(workerPrelude)+networkHelpers+');})();';
+  const script='(()=>{if(typeof globalThis.registerProcessor===\"function\" || typeof globalThis.registerPaint===\"function\")return;if(globalThis.__playdeckProxyInstalled)return;globalThis.__playdeckProxyInstalled=true;'+INJECTED_NAMES+context+runtime+identity+desktop+performance+pointer+s3tcBootstrap(base,prefix)+'('+installCookieNamespace.toString()+')('+params+','+targetFromProxy.toString()+');('+CLIENT_HOOK+')('+params+','+JSON.stringify(workerPrelude)+networkHelpers+');})();';
   return worker?script:'<script data-cfasync="false" data-playdeck-bootstrap>'+script+'</script>';
 }
 export function s3tcBootstrap(base,prefix) {
