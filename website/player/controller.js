@@ -489,6 +489,40 @@ export function installController({ profileId, getFrame, forceMapping = false })
     #toggle,button,details{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
     button:hover,summary:hover{background:transparent!important;color:#fff;box-shadow:none!important}
     button:focus-visible,summary:focus-visible{background:transparent!important;box-shadow:none!important;outline:2px solid #ddd!important;outline-offset:2px}
+
+    /* Shared Playdeck appearance tokens inherited from :root through shadow DOM. */
+    :host{font:400 13px/1.5 var(--player-font,system-ui,sans-serif)}
+    #panel{width:min(300px,calc(100vw - 20px));padding:14px;border:0;
+      border-radius:12px;background:var(--playdeck-menu-surface,rgba(30,30,30,.79))!important;
+      backdrop-filter:var(--playdeck-menu-blur,blur(18px))!important;
+      -webkit-backdrop-filter:var(--playdeck-menu-blur,blur(18px))!important;
+      box-shadow:var(--playdeck-menu-shadow,0 8px 30px #0004)!important;
+      font:400 13px/1.5 var(--player-font,system-ui,sans-serif)}
+    #panel h2{font:500 14px/1.4 var(--player-font,system-ui,sans-serif)}
+    #panel p,#panel label{font-size:12px}
+    #toggle,button,summary{border:0!important;border-radius:9px;
+      background:var(--playdeck-control-surface,rgba(255,255,255,.055))!important;
+      box-shadow:none!important;backdrop-filter:none!important;
+      -webkit-backdrop-filter:none!important;
+      transition:background-color 150ms ease,color 150ms ease}
+    #toggle:hover,button:not(:disabled):hover,summary:hover{
+      background:var(--playdeck-control-hover,rgba(255,255,255,.125))!important;color:#fff}
+    #toggle[aria-expanded=true],button:active{
+      background:var(--playdeck-control-active,rgba(255,255,255,.16))!important}
+    #toggle{height:var(--player-height,34px);min-height:var(--player-height,34px);
+      padding:0 10px;font-size:11px;border-radius:var(--player-radius,9px)}
+    details{background:transparent!important;box-shadow:none!important;
+      backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+    #panel select,#panel input:not([type=checkbox]):not([type=range]){
+      min-height:34px;border:0!important;border-radius:9px;
+      background:var(--playdeck-field-surface,rgba(255,255,255,.085))!important;
+      box-shadow:none!important;backdrop-filter:none!important;
+      -webkit-backdrop-filter:none!important;font:400 12px/1.4 var(--player-font,system-ui,sans-serif)}
+    #panel select:hover,#panel input:not([type=checkbox]):not([type=range]):hover{
+      background:var(--playdeck-control-hover,rgba(255,255,255,.125))!important}
+    button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{
+      outline:2px solid #ddd!important;outline-offset:2px;box-shadow:none!important}
+    @media(prefers-reduced-motion:reduce){#toggle,button,summary{transition:none!important}}
   </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
   <section id="panel" hidden aria-label="Controller settings"><header><h2>Controller mapping</h2></header>
   <p id="status" role="status">Connect a controller and press a button.</p>
@@ -551,6 +585,9 @@ export function installController({ profileId, getFrame, forceMapping = false })
   }
   document.addEventListener('timebomb:menu-open', (event) => {
     if (event.detail !== 'controller' && open) setOpen(false);
+  });
+  document.addEventListener('playdeck:game-interaction', () => {
+    if (open) setOpen(false);
   });
   function setOpen(value) {
     if (value)
