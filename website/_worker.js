@@ -1,7 +1,7 @@
 import {BUILD_REVISION,FEATURE_RELEASE} from './player/version.js';
 import {LEGACY_PREFIX,PREFIX,LOCAL_PREFIX,ASSET_VERSION,INJECTED_NAMES,DESKTOP_UA,desktopMedia,desktopOverrides,installPointerCompatibility,publicHost,targetFromProxy,proxyURL,CLIENT_HOOK,bootstrap,s3tcBootstrap,rewriteCSS,rewritePageIdentity,installPageIdentity,rewriteJS,rewriteGameCompatibility,cookiePrefix,scopedCookie,upstreamHeaders,proxyHeaders,contentHashResponse} from './player/proxy-core.js';
 import {proxyContext,recoverGameRequest} from './player/session.js';
-import {executableScript} from './player/rewrite.js';
+import {executableScript,rewriteImportMap} from './player/rewrite.js';
 export * from './player/proxy-core.js';
 export {installPerformance as installMobilePerformance} from './player/performance.js';
 
@@ -64,6 +64,13 @@ export default {
     }});
     try {
       let target = targetFromProxy(incoming,routePrefix);
+      const websocket=request.headers.get('upgrade')?.toLowerCase()==='websocket';
+      const socketSource=target.searchParams.get('__playdeck_source');
+      target.searchParams.delete('__playdeck_source');
+      if(/^wss?:$/.test(target.protocol)) {
+        if(!websocket)return new Response('WebSocket route requires an upgrade.',{status:426});
+        target.protocol=target.protocol==='wss:'?'https:':'http:';
+      }
       if (!['GET','HEAD','POST','PUT','PATCH','DELETE'].includes(request.method)) return new Response('Unsupported game request method.', {status:405});
       const read = ['GET','HEAD'].includes(request.method);
       const selected=launchContext.mode || (request.headers.get('cookie') || '').match(/(?:^|;\s*)tb_performance=(full|auto|fast|native)(?:;|$)/)?.[1] || 'full';
@@ -75,10 +82,24 @@ export default {
       let response;
       for (let redirects = 0; redirects <= 5; redirects++) {
         // Runtime URL hooks discover dependencies as the game requests them.
-        // Follow changing public HTTPS hosts without a catalog host list.
-        if (!publicHost(target.hostname) || target.username || target.password || target.port || target.protocol !== 'https:' || target.hostname === incoming.hostname || ['timebomb.lol','www.timebomb.lol'].includes(target.hostname))
-          return new Response('This game dependency must use a public HTTPS host.', {status:403});
+        // Follow changing public dependency hosts without a catalog host list.
+        if (!publicHost(target.hostname) || target.username || target.password || !/^https?:$/.test(target.protocol) || target.hostname === incoming.hostname || ['timebomb.lol','www.timebomb.lol'].includes(target.hostname))
+          return new Response('This game dependency must use a public HTTP(S) host.', {status:403});
         const headers = upstreamHeaders(request,target);
+        if(websocket) {
+          headers.set('Upgrade','websocket');
+          for(const name of ['sec-websocket-protocol','sec-websocket-version','sec-websocket-key','sec-websocket-extensions']) {
+            if(request.headers.has(name))headers.set(name,request.headers.get(name));
+          }
+          // Upstream servers validate the original game's Origin, not the launcher.
+          let source=target.origin;
+          try {const upstreamSource=new URL(socketSource);if(publicHost(upstreamSource.hostname) && /^https?:$/.test(upstreamSource.protocol))source=upstreamSource.origin;}catch{}
+          try {const referrer=new URL(request.headers.get('referer') || request.referrer);source=targetFromProxy(referrer,proxyContext(referrer.pathname).prefix).origin;}catch{}
+          headers.set('Origin',source);
+          const upgraded=await fetch(target.href,{method:'GET',headers,redirect:'manual'});
+          // Return the native upgrade Response intact so Cloudflare relays frames.
+          return upgraded;
+        }
         // Old rewrites must be rebuilt even when the upstream file is unchanged.
         if(local && request.headers.has('X-Playdeck-Transform') && request.headers.get('X-Playdeck-Transform')!==transform){
           headers.delete('if-none-match');headers.delete('if-modified-since');
@@ -106,7 +127,7 @@ export default {
         }
         if (![301,302,303,307,308].includes(response.status) || !response.headers.has('location')) break;
         const destination = new URL(response.headers.get('location'),target);
-        if (destination.protocol !== 'https:' || destination.username || destination.password || destination.port || !publicHost(destination.hostname) || destination.hostname === incoming.hostname || ['timebomb.lol','www.timebomb.lol'].includes(destination.hostname)) return new Response('Invalid game redirect.',{status:403});
+        if (!/^https?:$/.test(destination.protocol) || destination.username || destination.password || !publicHost(destination.hostname) || destination.hostname === incoming.hostname || ['timebomb.lol','www.timebomb.lol'].includes(destination.hostname)) return new Response('Invalid game redirect.',{status:403});
         // Let the browser apply redirect method rules and store scoped cookies.
         const redirected = proxyHeaders(response,target,routePrefix);
         redirected.set('Location',proxyURL(destination.href,target.href,incoming.origin,routePrefix));
@@ -118,7 +139,7 @@ export default {
       const rewritten=/(text\/html|text\/css|javascript|ecmascript)/i.test(type);
       const preserveSource=integrity || (/javascript|ecmascript/i.test(type) && destination==='empty' && !request.headers.has('X-Playdeck-Executable'));
       if(preserveSource)headers.set('X-Playdeck-Preserve-Source','1');
-      if(local && rewritten && !preserveSource)headers.set('X-Playdeck-Transform',transform);
+      if(local && rewritten && !preserveSource){headers.set('X-Playdeck-Transform',transform);headers.set('X-Playdeck-Network',ASSET_VERSION);}
       const finish=result=>local && response.status===200 && !headers.has('X-Playdeck-Source-ETag') && !headers.has('Last-Modified')?contentHashResponse(result,request):result;
       // Data-fetch and integrity-protected sources must retain their original bytes.
       if (request.method === 'HEAD' || [204,205,304].includes(response.status) || response.status === 206 || preserveSource || !/(text\/html|text\/css|javascript|ecmascript)/i.test(type))
@@ -138,22 +159,27 @@ export default {
           }})
           .on('head', {element(element) {element.prepend(bootstrap(base, origin,false,routePrefix,selected), {html:true});}})
           .on('*', {element(element) {
-            for (const attr of ['src','href','poster','action','data']) {
+            for (const attr of ['src','href','poster','action','formaction','data','background','xlink:href']) {
               const value = element.getAttribute(attr);
               if (value) element.setAttribute(attr, proxyURL(value, documentBase, origin,routePrefix));
             }
+            for(const attr of ['srcset','imagesrcset']) {
+              const value=element.getAttribute(attr);
+              if(value)element.setAttribute(attr,value.replace(/(^|,\s*|\s+)([^\s]+)(\s+(?:\d+w|[\d.]+x))?(?=\s*(?:,|$))/g,(_all,lead,url,size='')=>lead+proxyURL(url.replace(/,$/,''),documentBase,origin,routePrefix)+size+(url.endsWith(',')?',':'')));
+            }
+            if(element.getAttribute('ping'))element.setAttribute('ping',element.getAttribute('ping').split(/\s+/).map(value=>proxyURL(value,documentBase,origin,routePrefix)).join(' '));
             if(element.tagName==='script' && element.getAttribute('integrity') && element.getAttribute('src')){const url=new URL(element.getAttribute('src'));url.searchParams.set('__playdeck_integrity','1');element.setAttribute('src',url.href);}else element.removeAttribute('integrity');
             if (element.tagName === 'iframe') element.setAttribute('allow', 'cross-origin-isolated; fullscreen; autoplay; gamepad');
             // Keep authored media queries; desktop identity and quality are independent.
             if (element.getAttribute('style')) element.setAttribute('style', rewriteCSS(element.getAttribute('style'), documentBase, origin,routePrefix,'full'));
           }})
-          .on('script:not([src])', {element(element){this.executable=executableScript(element.getAttribute('type'));this.buffer='';},text(chunk) {
-            if(this.executable===false)return;
+          .on('script:not([src])', {element(element){this.importMap=element.getAttribute('type')?.trim()==='importmap';this.executable=executableScript(element.getAttribute('type'));this.buffer='';},text(chunk) {
+            if(this.executable===false && !this.importMap)return;
             // HTMLRewriter text chunks are not guaranteed to align with URL literals.
             // Buffer each inline script until the last chunk before rewriting.
             this.buffer = (this.buffer || '') + chunk.text;
             chunk.remove();
-            if (chunk.lastInTextNode) {chunk.after(rewriteJS(this.buffer, documentBase, origin,routePrefix), {html:true});this.buffer='';}
+            if (chunk.lastInTextNode) {chunk.after(this.importMap?rewriteImportMap(this.buffer,value=>proxyURL(value,documentBase,origin,routePrefix)):rewriteJS(this.buffer, documentBase, origin,routePrefix), {html:true});this.buffer='';}
           }})
           .on('style', {text(chunk) {
             this.buffer = (this.buffer || '') + chunk.text; chunk.remove();

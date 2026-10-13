@@ -4,10 +4,11 @@ import {staticResponse,routeCachedResponse} from './cache-policy.js';
 import {partialWriter,resumeDownload,clearPartial,clearAllPartials} from './download-store.js';
 const PREFIX='/player/games/';
 const CACHE='timebomb-local-games-v1';
-const SHELL='playdeck-local-shell-v33';
+const SHELL='playdeck-local-shell-v34';
 const METADATA='playdeck-local-hashes-v1';
 const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/settings.js','/player/toolbar.js','/player/toolbar-icons.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
 SHELL_FILES.push('/player/version.js','/player/feature-tools.js','/player/cookies.js','/player/session.js','/player/options.js','/player/game-runtime.js','/player/proxy-core.js','/player/rewrite.js','/player/vendor/acorn.js','/player/cache-policy.js','/player/download-store.js','/player/deck.js','/player/deck.css','/player/profiles.js','/player/saves.js','/player/touch.js','/player/capture.js','/player/packages.js','/player/manifest.webmanifest','/player/icon.svg','/player/build.json');
+SHELL_FILES.push('/player/network.js','/player/network-url.js');
 const OLD_PREFIX='/__sandbox/games/';
 
 export class DownloadActivity {
@@ -52,6 +53,8 @@ export async function networkFetch(request,event) {
   const end=activity.start();
   let response;
   try {response=await fetch(request);} catch(error) {end();throw error;}
+  // Live event streams are connections, not downloads that block game readiness.
+  if(/text\/event-stream/i.test(response.headers.get('Content-Type') || '')){end();return response;}
   if (!response.body) {end();return response;}
   const reader=response.body.getReader();
   let finish;
