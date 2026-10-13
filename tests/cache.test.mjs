@@ -422,3 +422,46 @@ test('cached game files survive launch-session changes without contacting Cloudf
     }
     assert.equal(calls.length,0);
   }));
+
+
+test('empty static asset responses retry once and only the repaired body is cached', async () =>
+  fixture(async ({data,event,calls,finish,setUpstream}) => {
+    let attempt=0;
+    setUpstream(async () => {
+      attempt++;
+      if(attempt===1)return new Response(null,{headers:{'Content-Length':'11','Content-Type':'application/octet-stream'}});
+      return new Response('saved asset',{headers:{'Content-Length':'11','Content-Type':'application/octet-stream'}});
+    });
+    const response=await localFetch(new Request(url),event);
+    assert.equal(await response.text(),'saved asset');
+    await finish();
+    assert.equal(attempt,2);
+    assert.equal(calls[1].headers.get('Cache-Control'),'no-cache');
+    assert.equal(await (await data.match(url)).text(),'saved asset');
+  }));
+
+test('cached empty assets are invalidated and downloaded again', async () =>
+  fixture(async ({data,metadata,event,calls,finish,setUpstream}) => {
+    await data.put(url,new Response(null,{headers:{'Content-Length':'11','Content-Type':'application/octet-stream'}}));
+    await metadata.put(url,Response.json({bytes:0,owners:[]}));
+    setUpstream(async () => new Response('saved asset',{headers:{'Content-Length':'11','Content-Type':'application/octet-stream'}}));
+    const response=await localFetch(new Request(url),event);
+    assert.equal(await response.text(),'saved asset');
+    await finish();
+    assert.equal(calls.length,1);
+    assert.equal(await (await data.match(url)).text(),'saved asset');
+  }));
+
+test('truncated asset bodies are never left in the local cache', async () =>
+  fixture(async ({data,metadata,event,calls,finish,setUpstream}) => {
+    setUpstream(async () => new Response('bad',{headers:{'Content-Length':'11','Content-Type':'application/octet-stream'}}));
+    const response=await localFetch(new Request(url),event);
+    assert.equal(await response.text(),'bad');
+    await finish();
+    assert.equal(await data.match(url),undefined);
+    assert.equal(await metadata.match(url),undefined);
+    setUpstream(async () => new Response('saved asset',{headers:{'Content-Length':'11','Content-Type':'application/octet-stream'}}));
+    assert.equal(await (await localFetch(new Request(url),event)).text(),'saved asset');
+    await finish();
+    assert.equal(calls.length,2);
+  }));

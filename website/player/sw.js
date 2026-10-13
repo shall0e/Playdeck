@@ -84,6 +84,55 @@ export function isAsset(request) {
 // Retained for callers; downloads have no per-file size limit.
 export const MAX_CACHE_BYTES=8*1024*1024;
 let lastActivityNotification=0;
+export export function isStaticFileRequest(request) {
+  const path=new URL(request.url).pathname;
+  return request.method==='GET' && /\.[a-z0-9]{1,16}$/i.test(path) && !/\.(?:html?|xhtml)$/i.test(path);
+}
+async function staticAssetProblem(request,response) {
+  if(response.status!==200 || !isStaticFileRequest(request))return null;
+  if(/html/i.test(response.headers.get('Content-Type') || ''))return 'an HTML fallback';
+  if(response.headers.get('Content-Length')==='0' || !response.body)return 'an empty response';
+  const reader=response.clone().body?.getReader();
+  if(!reader)return 'an empty response';
+  try {
+    while(true) {
+      const next=await reader.read();
+      if(next.done)return 'an empty response';
+      if(!next.value?.byteLength)continue;
+      const start=new TextDecoder().decode(next.value.subarray(0,512)).replace(/^\uFEFF/,'').trimStart();
+      if(/^(?:<!doctype\s+html\b|<html\b)/i.test(start))return 'an HTML fallback';
+      return null;
+    }
+  } catch {return null;}
+  finally {void reader.cancel().catch(()=>{});}
+}
+async function repairStaticAsset(request,response,fetcher) {
+  let problem=await staticAssetProblem(request,response);
+  if(!problem)return response;
+  try{await response.body?.cancel();}catch{}
+  const headers=new Headers(request.headers);headers.set('Cache-Control','no-cache');
+  response=await fetcher(new Request(request,{cache:'reload',headers}));
+  problem=await staticAssetProblem(request,response);
+  if(!problem)return response;
+  try{await response.body?.cancel();}catch{}
+  return new Response('Playdeck could not load this game asset after retry: '+problem+'.',{status:502,headers:{'Content-Type':'text/plain','Cache-Control':'no-store','Cross-Origin-Resource-Policy':'cross-origin'}});
+}
+async function cachedAssetInvalid(request,response) {
+  if(!staticResponse(request,response))return true;
+  const expected=!response.headers.has('Content-Encoding')?Number(response.headers.get('Content-Length') || 0):0;
+  try {
+    const metadata=await caches.open(METADATA),saved=await metadata.match(localKey(request));
+    if(!saved)return false;
+    const info=await saved.json(),bytes=Number(info.bytes);
+    if(bytes===0)return true;
+    if(expected>0 && bytes>0 && expected!==bytes)return true;
+  } catch {}
+  return false;
+}
+async function deleteCachedAsset(cache,request) {
+  await cache.delete(request);
+  try{await (await caches.open(METADATA)).delete(localKey(request));}catch{}
+}
 export function canStore(request,response) {
   return isAsset(request) && request.method==='GET' && response.status===200 && response.type!=='opaque' &&
     staticResponse(request,response) && !response.headers.has('Content-Range') && !request.headers.has('Range');
@@ -160,11 +209,16 @@ export function cacheAsset(cache,key,response,event,metadata) {
   // multi-GB stream can otherwise queue the entire slower branch in memory.
   const partial=partialWriter(key.url,response);
   const reader=response.body.getReader(),pipe=new TransformStream(),writer=pipe.writable.getWriter();
-  const startedAt=cacheRevision;
+  const startedAt=cacheRevision,expected=!response.headers.has('Content-Encoding')?Number(response.headers.get('Content-Length') || 0):0;
   let bytes=0,writing=true;
   const cleared=()=>clearHistory.some(entry=>entry.revision>startedAt && (!entry.scope || matchesGameCache(key,entry.scope)));
   const saving=cache.put(key,new Response(pipe.readable,{status:response.status,statusText:response.statusText,headers:response.headers})).then(async()=>{
     if(cleared()){await cache.delete(key);return;}
+    if(bytes===0 || (expected>0 && bytes!==expected)){
+      await cache.delete(key);
+      if(metadata)await metadata.delete(key);
+      return;
+    }
     if(metadata){
       const previous=metadataWrites.get(key.url) || Promise.resolve();
       const write=previous.catch(()=>{}).then(async()=>{let saved={};try{saved=await (await metadata.match(key))?.json() || {};}catch{}const owner=event.playdeckOwner;await metadata.put(key,Response.json({...saved,bytes,owners:[...new Set([...(saved.owners || []),...(owner?[owner]:[])])],pinnedOwners:[...new Set([...(saved.pinnedOwners || []),...(event.playdeckPinned && owner?[owner]:[])])],savedAt:Date.now()}));});
@@ -183,7 +237,10 @@ export function cacheAsset(cache,key,response,event,metadata) {
     async pull(controller){
       try{
         const next=await reader.read();
-        if(next.done){await partial?.finish();if(writing)try{await writer.close();}catch{}controller.close();return;}
+        if(next.done){
+          if(bytes>0 && (!expected || bytes===expected))await partial?.finish();else await partial?.interrupt();
+          if(writing)try{await writer.close();}catch{}controller.close();return;
+        }
         bytes+=next.value.byteLength;await partial?.write(next.value);
         if(writing)try{await writer.write(next.value);}catch{writing=false;}
         controller.enqueue(next.value);
@@ -233,8 +290,8 @@ export async function fetchLocal(request,event) {
   try{cache=await caches.open(CACHE);}catch{return networkFetch(request,event);}
   const key=localKey(request),range=request.headers.get('Range');
   let cached=await cache.match(key);
-  if(cached && needsAssetRefresh(request,cached)){await cache.delete(key);cached=null;}
-  if(cached && !staticResponse(new Request(key),cached)){cached=null;await cache.delete(key);}
+  if(cached && needsAssetRefresh(request,cached)){await deleteCachedAsset(cache,key);cached=null;}
+  if(cached && await cachedAssetInvalid(key,cached)){cached=null;await deleteCachedAsset(cache,key);}
   if(!cached && pendingSaves.has(key.url)){await pendingSaves.get(key.url);cached=await cache.match(key);}
   // Cache-busting query strings must not cause another download of a saved
   // static file. Documents and API/manifest responses retain query semantics.
@@ -242,14 +299,19 @@ export async function fetchLocal(request,event) {
     // Preserve semantic queries such as asset IDs, language and level numbers.
     for(const savedKey of await cache.keys?.(key,{ignoreSearch:true}) || []){
       if(localKey(savedKey).url!==key.url)continue;
-      const candidate=await cache.match(savedKey);
-      if(candidate && !/html|json|xml/i.test(candidate.headers.get('Content-Type') || '') && !candidate.headers.has('X-Playdeck-Stored-Status')){cached=candidate;break;}
+      const candidate=await cache.match(savedKey),candidateRequest=localKey(savedKey);
+      if(candidate && !/html|json|xml/i.test(candidate.headers.get('Content-Type') || '') && !candidate.headers.has('X-Playdeck-Stored-Status')){
+        if(await cachedAssetInvalid(candidateRequest,candidate)){await deleteCachedAsset(cache,candidateRequest);continue;}
+        cached=candidate;break;
+      }
     }
   }
   if(!cached){
     const oldURL=new URL(request.url);oldURL.pathname=oldURL.pathname.replace(PREFIX,OLD_PREFIX);
-    const old=await cache.match(new Request(oldURL.href));
-    if(old && !/html|css|javascript|ecmascript/i.test(old.headers.get('Content-Type') || ''))cached=old;
+    const oldRequest=new Request(oldURL.href),old=await cache.match(oldRequest);
+    if(old && !/html|css|javascript|ecmascript/i.test(old.headers.get('Content-Type') || '')){
+      if(await cachedAssetInvalid(oldRequest,old))await deleteCachedAsset(cache,oldRequest);else cached=old;
+    }
   }
   if(cached && !forceNetwork){
     event.waitUntil(inform({type:'sandbox:cache-hit',session:context.session,url:request.url}));
@@ -277,7 +339,8 @@ export async function fetchLocal(request,event) {
   }
   try {
     const fetcher=value=>networkFetch(value,event);
-    const response=(!range && request.method==='GET'?await resumeDownload(request,key.url,fetcher):null) || await fetcher(request);
+    let response=(!range && request.method==='GET'?await resumeDownload(request,key.url,fetcher):null) || await fetcher(request);
+    if(!range && request.method==='GET')response=await repairStaticAsset(request,response,fetcher);
     if(forceNetwork && response.status===304 && cached)return routeCachedResponse(cached,request);
     if(sessionOptions.get(context.session)?.online)return response;
     if(!response.ok && response.status!==206)event.waitUntil(inform({type:'sandbox:request-error',session:context.session,url:request.url,status:response.status,contentType:response.headers.get('Content-Type')}));

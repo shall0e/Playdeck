@@ -103,6 +103,11 @@ test('HTTP-only dependencies preserve method, body and public nondefault ports',
 test('live server events are never stored as downloaded game files',()=>{
   assert.equal(staticResponse(new Request(origin+prefix+'game.example/events'),new Response('data: ready\n\n',{headers:{'Content-Type':'text/event-stream'}})),false);
 });
+test('static game assets reject HTML fallbacks and explicit empty responses',()=>{
+  const part=new Request(origin+prefix+'game.example/resources.zip.part1');
+  assert.equal(staticResponse(part,new Response('<html>not the archive</html>',{headers:{'Content-Type':'text/html'}})),false);
+  assert.equal(staticResponse(part,new Response(null,{headers:{'Content-Type':'application/octet-stream','Content-Length':'0'}})),false);
+});
 
 test('navigation destinations are mapped without rewriting game data or shadowed variables',()=>{
   const source="location.href=next; window.location.assign('/client.html'); document.location='https://cdn.example/page'; function local(location){location.href='/untouched';} const data='https://cdn.example/data';";

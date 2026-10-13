@@ -8,7 +8,9 @@ export function staticResponse(request,response) {
   const url=canonicalGameURL(request.url),type=response.headers.get('Content-Type') || '';
   if(request.method!=='GET' || response.status!==200)return false;
   if(/text\/event-stream/i.test(type))return false;
-  if(/\.(?:json|wasm|bin|data|pak|pk3|zip|js|mjs)$/i.test(url.pathname) && /html/i.test(type))return false;
+  const filePath=/\.[^/.]+$/i.test(url.pathname),htmlFile=/\.(?:html?|xhtml)$/i.test(url.pathname);
+  if(request.method==='GET' && response.headers.get('Content-Length')==='0')return false;
+  if(filePath && !htmlFile && /html/i.test(type))return false;
   if(/(?:^|\/)(?:api|graphql|auth|login|logout|session|sessions|user|account|save|progress)(?:\/|\.|$)/i.test(url.pathname))return false;
   if(/json|xml/i.test(type)) {
     if(/(?:^|\/)(?:config|configuration|status|profile|settings|token)\.(?:json|xml)$/i.test(url.pathname))return false;
