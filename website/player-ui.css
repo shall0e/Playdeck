@@ -746,3 +746,8 @@ body.playdeck-controller-menu-open > iframe {
 #game-menu-bar .game-display[open] > .display-panel {
   pointer-events:auto!important;
 }
+
+/* The full-screen host itself must remain click-through even while visible.
+   Only its button/panel children receive clicks; empty areas dismiss menus. */
+#game-menu-bar.is-visible {pointer-events:none!important}
+#game-menu-bar.is-visible > * {pointer-events:auto!important}

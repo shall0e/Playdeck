@@ -64,3 +64,9 @@ test('viewport-sized pointer-transparent toolbar lets menus receive clicks beyon
   assert.match(css,/#game-menu-bar > \* \{[\s\S]*?pointer-events:auto!important/);
   assert.match(css,/pointer-events:none!important/);
 });
+
+test('empty areas of visible fullscreen toolbar pass clicks through to game',()=>{
+  const css=readFileSync(new URL('../website/player-ui.css',import.meta.url),'utf8');
+  assert.match(css,/#game-menu-bar\.is-visible \{pointer-events:none!important\}/);
+  assert.match(css,/#game-menu-bar\.is-visible > \* \{pointer-events:auto!important\}/);
+});
