@@ -22,7 +22,9 @@ const metadataWrites=new Map();
 // The launcher supplies its exact game route to recover native root-path fetches
 // that originate in its document or in a worker without a usable referrer.
 export function recoverAssetRequest(request,{clientURL,referrer,session}={}) {
-  const candidates=[clientURL,referrer];
+  // Prefer the exact launch session, then the referrer, then the launch URL.
+  // The latter also works after the worker loses its in-memory session map.
+  const candidates=[];
   if(session?.prefix && session?.sourceURL) {
     try {
       const context=proxyContext(session.prefix+'source.example/');
@@ -38,6 +40,7 @@ export function recoverAssetRequest(request,{clientURL,referrer,session}={}) {
       }
     } catch {}
   }
+  candidates.push(clientURL,referrer);
   return recoverGameRequest(request,candidates);
 }
 function sessionActivity(request){const session=proxyContext(new URL(request.url).pathname).session;if(!session)return downloads;if(!sessions.has(session))sessions.set(session,new DownloadActivity(data=>void inform({...data,session})));return sessions.get(session);}
