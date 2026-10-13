@@ -523,6 +523,95 @@ export function installController({ profileId, getFrame, forceMapping = false })
     button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{
       outline:2px solid #ddd!important;outline-offset:2px;box-shadow:none!important}
     @media(prefers-reduced-motion:reduce){#toggle,button,summary{transition:none!important}}
+
+    /* Shared design tokens are inherited from :root through this shadow tree. */
+    :host{font:400 11px/1.4 var(--player-font,system-ui,sans-serif)!important}
+    #panel{
+      box-sizing:border-box!important;
+      width:min(var(--playdeck-menu-width,258px),calc(100vw - 20px))!important;
+      max-height:min(75dvh,560px)!important;
+      padding:11px!important;
+      border:var(--playdeck-menu-border,0px solid transparent)!important;
+      outline:0!important;border-radius:11px!important;
+      background:var(--playdeck-menu-surface,rgba(29,29,29,.78))!important;
+      box-shadow:var(--playdeck-menu-shadow,0 8px 28px #0005)!important;
+      backdrop-filter:var(--playdeck-menu-blur,blur(16px))!important;
+      -webkit-backdrop-filter:var(--playdeck-menu-blur,blur(16px))!important;
+      font:400 11px/1.4 var(--player-font,system-ui,sans-serif)!important;
+      scrollbar-width:none
+    }
+    #panel::-webkit-scrollbar{display:none}
+    #panel header{margin-bottom:5px}
+    #panel h2{font:500 13px/1.4 var(--player-font,system-ui,sans-serif)!important}
+    #panel label,#panel p,#panel small,#panel span{font-size:11px}
+    #panel p{line-height:1.35;margin:5px 0}
+    #panel label{margin:6px 0}
+    #panel .row{gap:5px;margin:3px 0}
+    #panel #bindings{display:grid;gap:1px}
+    #panel #bindings .row{
+      display:grid!important;grid-template-columns:54px minmax(0,1fr) 68px;
+      gap:4px!important;align-items:center;min-height:24px;
+      padding:0!important;margin:0!important;flex-wrap:nowrap!important
+    }
+    #panel #bindings .row span{
+      font:400 10px/1.3 var(--player-font,system-ui,sans-serif)!important;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+    }
+    #panel #bindings input,
+    #panel #bindings select{
+      box-sizing:border-box!important;display:block;
+      width:100%!important;min-width:0!important;max-width:none!important;
+      height:24px!important;min-height:24px!important;
+      margin:0!important;padding:2px 1px!important;
+      font:400 10px/1.3 var(--player-font,system-ui,sans-serif)!important
+    }
+    #panel #bindings select{max-width:none!important}
+    #panel #bindings input::placeholder{color:#8a8a8a}
+    #panel .binding-options{padding:0 4px 7px}
+    #panel details{margin-top:6px!important;border:0!important}
+    #panel details summary{min-height:28px!important;padding:5px 2px!important}
+    #panel .axis label{margin:3px 0}
+    #panel .restore-row{margin-top:6px}
+    #panel .restore-row button{min-height:25px!important}
+    #panel input[type=range]{min-height:18px!important;margin:3px 0!important}
+    #panel :is(button,input,select,textarea,summary),#toggle,#restore,details{
+      border:0!important;outline:0!important;box-shadow:none!important;
+      background:transparent!important;
+      backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+      color:var(--playdeck-text,#e1e1e1)!important;
+      transition:color 120ms ease,text-shadow 120ms ease!important
+    }
+    #panel :is(button,input,select,textarea,summary):is(:hover,:focus,:focus-visible,:active),
+    #toggle:is(:hover,:focus,:focus-visible,:active) {
+      border:0!important;outline:0!important;box-shadow:none!important;
+      background:transparent!important;color:var(--playdeck-hover-text,#fff)!important;
+      text-shadow:0 0 7px #ffffff42!important
+    }
+    #panel :is(button,input,select,textarea,summary):focus-visible,
+    #toggle:focus-visible {outline:0!important;box-shadow:none!important}
+    #toggle{height:var(--player-height,34px)!important;
+      min-height:var(--player-height,34px)!important;
+      padding:0 10px!important;border-radius:var(--player-radius,9px)!important;
+      font:400 11px/1.4 var(--player-font,system-ui,sans-serif)!important}
+    #panel :is(input,select,textarea) {min-height:26px;padding:3px 2px!important;
+      font:400 11px/1.4 var(--player-font,system-ui,sans-serif)!important}
+    #panel input[type=checkbox] {accent-color:#bdbdbd;min-height:14px!important;
+      outline:0!important;box-shadow:none!important}
+    #panel select option{background:#202020;color:#e1e1e1}
+    @supports (appearance: base-select) {
+      #panel select,#panel select::picker(select){appearance:base-select}
+      #panel select::picker(select) {
+        background:var(--playdeck-menu-surface,rgba(29,29,29,.78))!important;
+        border:var(--playdeck-menu-border,0px solid transparent)!important;
+        border-radius:9px!important;padding:4px!important;
+        color:var(--playdeck-text,#e1e1e1)!important;
+        box-shadow:var(--playdeck-menu-shadow,0 8px 28px #0005)!important
+      }
+      #panel option{background:transparent!important;color:var(--playdeck-text,#e1e1e1)!important;
+        border:0!important;padding:5px!important}
+      #panel option:is(:hover,:focus,:checked){background:transparent!important;color:#fff!important}
+    }
+    @media(prefers-reduced-motion:reduce){#panel :is(button,input,select,summary),#toggle{transition:none!important}}
   </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
   <section id="panel" hidden aria-label="Controller settings"><header><h2>Controller mapping</h2></header>
   <p id="status" role="status">Connect a controller and press a button.</p>

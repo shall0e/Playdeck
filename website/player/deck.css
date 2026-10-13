@@ -1,182 +1,189 @@
 .deck-section{margin-top:14px;border-top:1px solid #ffffff12;padding-top:12px}.deck-section>summary{cursor:pointer;font-size:13px;font-weight:500;padding:6px 0}.deck-section label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}.deck-section input[type=range]{width:120px}.deck-section input:not([type=checkbox]):not([type=range]),.deck-section textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid #ffffff20;border-radius:8px;background:#ffffff08;color:inherit;padding:9px;font:inherit}.deck-section select{max-width:145px}.deck-section p,.deck-section small{font-size:12px;line-height:1.5;color:#b7b7b7}.deck-actions{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.deck-actions button{font-size:12px!important;padding:8px 10px!important}.deck-status{white-space:pre-wrap;overflow-wrap:anywhere}.deck-files{display:grid;gap:7px;max-height:220px;overflow:auto;margin:12px 0}.deck-file{display:flex;gap:10px;align-items:center;justify-content:space-between;border-radius:8px;background:#ffffff05;padding:9px;font-size:12px}.deck-file span{min-width:0;overflow-wrap:anywhere}.deck-error-card{width:min(540px,90vw);border:1px solid #ffae9438;border-radius:12px;background:#1b1513;padding:14px;text-align:left;margin:12px auto}.deck-error-card p{font-size:12px;overflow-wrap:anywhere;margin:6px 0!important}.deck-error-card button{font-size:12px!important}.deck-hud{position:fixed;top:10px;left:10px;z-index:2147483645;background:#111b;backdrop-filter:blur(12px);color:#ddd;border-radius:10px;padding:9px 12px;font:11px/1.5 system-ui;pointer-events:none}.deck-hud[hidden]{display:none}.deck-hud canvas{display:block;width:200px;height:40px;margin-top:5px}.deck-modal{width:min(720px,calc(100vw - 32px));max-height:85dvh;overflow:auto;border:0;border-radius:16px;padding:24px;background:#171717;color:#eee;font:13px/1.5 system-ui}.deck-modal::backdrop{background:#0009;backdrop-filter:blur(4px)}.deck-modal header{display:flex;justify-content:space-between;align-items:center;gap:16px}.deck-modal h2{font:500 18px system-ui;margin:0}.deck-recent{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:20px}.deck-recent article{background:#ffffff06;border-radius:12px;padding:14px}.deck-recent img{width:100%;height:105px;object-fit:cover;border-radius:8px;margin-bottom:8px}.deck-recent p{font-size:12px}.deck-recent h3{font:500 14px system-ui;margin:5px 0}.deck-link-builder{display:grid;gap:10px;margin-top:14px}.deck-link-builder label{display:grid;gap:5px}.deck-link-builder input,.deck-link-builder textarea,.deck-link-builder select{box-sizing:border-box;width:100%;font:inherit;color:inherit;background:#ffffff09;border:1px solid #ffffff20;border-radius:8px;padding:9px}.deck-link-builder textarea{height:95px;resize:vertical}@media(prefers-reduced-motion:no-preference){.deck-modal[open]{animation:deck-appear .15s ease-out}@keyframes deck-appear{from{opacity:0;filter:blur(4px)}to{opacity:1;filter:blur(0)}}}
 
-/* Panels and fields use glass. Buttons and expandable headings have no painted box. */
-body select,
-body input:not([type=checkbox]):not([type=range]),
-body textarea,
-.deck-modal,
-.deck-recent article,
-.deck-file,
-.deck-error-card {
-  border: 0 !important;
-  border-radius: 10px;
-  background: var(--player-glass, rgba(38,38,38,.72)) !important;
-  color: var(--player-text, #f2f2f2);
-  backdrop-filter: blur(18px) !important;
-  -webkit-backdrop-filter: blur(18px) !important;
-}
-body button {
-  border: 0 !important;
-  outline: 0;
-  border-radius: 10px;
-  background: transparent !important;
-  color: var(--player-text, #f2f2f2);
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-.deck-section,
-.deck-section details {
-  border: 0 !important;
-  outline: 0;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-.deck-section { padding: 4px 10px; }
-.deck-section > summary,
-.deck-section details > summary {
-  padding: 9px 0;
-  list-style: none;
-  border: 0 !important;
-  outline: 0;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-.deck-section summary::-webkit-details-marker { display: none; }
-body button:hover,
-.deck-section summary:hover {
-  background: transparent !important;
-  color: #fff;
-  box-shadow: none !important;
-}
-body button:focus-visible,
-body select:focus-visible,
-body input:focus-visible,
-body textarea:focus-visible,
-.deck-section summary:focus-visible {
-  outline: 2px solid #ddd !important;
-  outline-offset: 2px;
-  box-shadow: none !important;
-}
-.deck-modal button { font: inherit; padding: 8px 12px; }
 
-/* Unified appearance for the toolbar and every player menu. */
+/* Single compact design system. Change these rules and Controller together. */
 :root {
-  --playdeck-menu-surface:rgba(30,30,30,.79);
-  --playdeck-menu-blur:blur(18px);
-  --playdeck-menu-shadow:0 8px 30px #0005;
-  --playdeck-control-surface:rgba(255,255,255,.055);
-  --playdeck-field-surface:rgba(255,255,255,.085);
-  --playdeck-control-hover:rgba(255,255,255,.125);
-  --playdeck-control-active:rgba(255,255,255,.16);
+  --playdeck-menu-width: 258px;
+  --playdeck-menu-surface: rgba(29,29,29,.78);
+  --playdeck-menu-blur: blur(16px);
+  --playdeck-menu-shadow: 0 8px 28px #0005;
+  --playdeck-menu-border: 0px solid transparent;
+  --playdeck-text: #e1e1e1;
+  --playdeck-hover-text: #fff;
+  --playdeck-muted: #aaa;
 }
 :root[data-playdeck-appearance='transparent'] {
-  --playdeck-menu-surface:transparent;
-  --playdeck-menu-blur:none;
-  --playdeck-menu-shadow:none;
-  --playdeck-control-surface:transparent;
-  --playdeck-field-surface:transparent;
-  --playdeck-control-hover:rgba(255,255,255,.12);
-  --playdeck-control-active:rgba(255,255,255,.17);
+  --playdeck-menu-surface: transparent;
+  --playdeck-menu-blur: none;
+  --playdeck-menu-shadow: none;
+  --playdeck-menu-border: 1px solid rgba(255,255,255,.88);
 }
-/* Entire surfaces change together. Menus remain legible above game content. */
+
+/* Only the OUTER panels can have a background or border. */
 #game-menu-bar .game-menu-panel,
 #game-menu-bar .display-panel,
 body > #panel,
 #tv-cast,
 .deck-modal {
-  background:var(--playdeck-menu-surface)!important;
-  backdrop-filter:var(--playdeck-menu-blur)!important;
-  -webkit-backdrop-filter:var(--playdeck-menu-blur)!important;
-  box-shadow:var(--playdeck-menu-shadow)!important;
-  border:0!important;border-radius:12px!important;
-  font:400 13px/1.5 var(--player-font)!important;
-  color:var(--player-text)!important;
+  box-sizing: border-box !important;
+  width: min(var(--playdeck-menu-width), calc(100vw - 20px)) !important;
+  max-width: calc(100vw - 20px) !important;
+  max-height: min(75dvh, 560px) !important;
+  padding: 11px !important;
+  background: var(--playdeck-menu-surface) !important;
+  backdrop-filter: var(--playdeck-menu-blur) !important;
+  -webkit-backdrop-filter: var(--playdeck-menu-blur) !important;
+  box-shadow: var(--playdeck-menu-shadow) !important;
+  border: var(--playdeck-menu-border) !important;
+  outline: none !important;
+  border-radius: 11px !important;
+  color: var(--playdeck-text) !important;
+  font: 400 12px/1.4 var(--player-font,system-ui,sans-serif) !important;
+  overflow-y: auto !important;
+  scrollbar-width: none;
 }
-#game-menu-bar .game-menu-panel{padding:8px!important}
-#game-menu-bar .display-panel{padding:14px!important}
+#game-menu-bar .game-menu-panel::-webkit-scrollbar,
+#game-menu-bar .display-panel::-webkit-scrollbar,
+body > #panel::-webkit-scrollbar,
+.deck-modal::-webkit-scrollbar {display:none}
+#game-menu-bar .game-menu-panel {padding: 6px !important;gap: 1px !important}
+#game-menu-bar .game-menu-panel button {
+  display:flex;align-items:center;min-height:33px!important;padding:5px 10px!important;
+  text-align:left;gap:9px
+}
+#game-menu-bar .display-panel header {margin-bottom:7px}
+#game-menu-bar .display-panel label {margin:6px 0;gap:6px}
 #game-menu-bar .display-panel h2,
-body > #panel h2,#tv-cast h2,.deck-modal h2 {
-  font:500 14px/1.4 var(--player-font)!important;letter-spacing:0!important
+#player-settings h2,
+#tv-cast h2,
+.deck-modal h2 {font: 500 13px/1.4 var(--player-font,system-ui,sans-serif) !important;margin:0 0 6px!important}
+body > #panel label, #game-menu-bar .display-panel label,
+#tv-cast label, .deck-modal label {font:400 11px/1.4 var(--player-font,system-ui,sans-serif)!important}
+#player-settings {gap:4px!important;margin-bottom:7px!important;padding-bottom:7px!important;border:0!important}
+#player-settings label {gap:3px!important}
+#player-settings .shortcut-row {gap:5px}
+#player-settings .shortcut-row input {width:90px}
+#panel > label {margin:7px 0!important}
+#panel .deck-section {margin:3px 0!important;padding:2px 0!important;border:0!important;background:transparent!important}
+#panel .deck-section > summary,
+#panel .deck-section details > summary {
+  padding:6px 2px!important;min-height:26px!important;
+  background:transparent!important;border:0!important;outline:0!important;
+  box-shadow:none!important;font:500 12px/1.4 var(--player-font,system-ui,sans-serif)!important
 }
-#game-menu-bar .display-panel label,
-body > #panel label,#tv-cast label {font:400 12px/1.5 var(--player-font)!important}
+#panel .deck-section label {margin:7px 0!important;gap:6px}
+#panel .deck-section p {margin:5px 0!important;font-size:11px!important}
+#panel .deck-section details, #panel .deck-file,
+#panel .deck-error-card, .deck-modal .deck-file,
+.deck-modal .deck-recent article {
+  background: transparent !important;
+  border:0!important;box-shadow:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important
+}
+#panel .deck-actions {gap:3px!important;margin:5px 0!important}
+#panel .deck-files {gap:3px!important;margin:5px 0!important}
+#panel .deck-file {padding:3px 2px!important}
+#panel .download-row {gap:4px;margin-bottom:5px}
+#panel .download-row button {white-space:nowrap}
+#panel .download-row #files {font-size:10px}
+#tv-cast {width:min(var(--playdeck-menu-width),calc(100vw - 20px))!important}
+
+/* Every button, heading, field, select and key input is always unfilled. */
+body button:not(#toolbar-edge),
+#game-menu-bar summary,
+#panel summary,
+#tv-cast summary,
+.deck-modal summary,
+body select,
+body input:not([type=checkbox]):not([type=radio]):not([type=range]),
+body textarea,
+.deck-modal :is(input,select,textarea,button) {
+  box-sizing:border-box!important;
+  background:transparent!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  color:var(--playdeck-text)!important;
+  font:400 11px/1.4 var(--player-font,system-ui,sans-serif)!important;
+  border-radius:7px!important;
+  transition:color 120ms ease,opacity 120ms ease,text-shadow 120ms ease!important;
+}
 #game-menu-bar .game-menu summary,
 #game-menu-bar .game-display summary,
 #game-menu-bar #badge,
-#toolbar-restore,
-body button:not(#toolbar-edge),
-body > #panel .deck-section summary {
-  border:0!important;
-  background:var(--playdeck-control-surface)!important;
-  color:var(--player-text)!important;
-  box-shadow:none!important;
-  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
-  transition:background-color 150ms ease,color 150ms ease,opacity 150ms ease!important;
+#toolbar-restore {background:transparent!important;box-shadow:none!important;border:0!important;outline:0!important}
+body button:not(#toolbar-edge):is(:hover,:focus,:focus-visible,:active),
+#game-menu-bar summary:is(:hover,:focus,:focus-visible,:active),
+#game-menu-bar [open]>summary,
+#game-menu-bar #badge[aria-expanded=true],
+#panel summary:is(:hover,:focus,:focus-visible,:active),
+#tv-cast button:is(:hover,:focus-visible),
+.deck-modal button:is(:hover,:focus-visible),
+body select:is(:hover,:focus,:focus-visible),
+body input:not([type=checkbox]):is(:hover,:focus,:focus-visible),
+body textarea:is(:hover,:focus,:focus-visible) {
+  background:transparent!important;
+  border:0!important;outline:0!important;box-shadow:none!important;
+  color:var(--playdeck-hover-text)!important;
+  text-shadow:0 0 7px #ffffff42!important;
 }
-body > #panel .deck-section summary{padding:9px 10px!important;border-radius:9px}
-#game-menu-bar .game-menu summary:hover,
-#game-menu-bar .game-display summary:hover,
-#game-menu-bar #badge:hover,
-#toolbar-restore:hover,
-body button:not(#toolbar-edge):not(:disabled):hover,
-body > #panel .deck-section summary:hover {
-  background:var(--playdeck-control-hover)!important;color:#fff!important
+body button:disabled {opacity:.45!important}
+#game-menu-bar :is(button,summary,input,select,textarea):focus-visible,
+body > #panel :is(button,summary,input,select,textarea):focus-visible,
+#tv-cast :is(button,summary,input,select,textarea):focus-visible,
+.deck-modal :is(button,summary,input,select,textarea):focus-visible {
+  outline:0!important;outline-offset:0!important;box-shadow:none!important
 }
-#game-menu-bar .game-menu[open]>summary,
-#game-menu-bar .game-display[open]>summary,
-#game-menu-bar #badge[aria-expanded='true'],
-body button:not(#toolbar-edge):active {
-  background:var(--playdeck-control-active)!important
+#game-menu-bar .display-panel select, body > #panel select,
+#tv-cast select, .deck-modal select,
+body > #panel input:not([type=checkbox]):not([type=range]),
+.deck-modal input, .deck-modal textarea {
+  min-height:26px!important;
+  padding:3px 18px 3px 3px!important;
+  background-color:transparent!important;
+  border:0!important;outline:0!important;box-shadow:none!important;
 }
-#game-menu-bar .game-menu-panel button,
-#game-menu-bar .display-panel button,
-body > #panel button{min-height:34px!important;border-radius:9px!important}
-#game-menu-bar .game-menu-panel button{min-height:40px!important;text-align:left}
-#game-menu-bar .display-panel select,
-body > #panel select,
-body > #panel input:not([type='checkbox']):not([type='range']),
-body > #panel textarea,
-#tv-cast select,.deck-modal select,.deck-modal input,.deck-modal textarea{
-  border:0!important;border-radius:9px!important;
-  background:var(--playdeck-field-surface)!important;
-  box-shadow:none!important;
-  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
-  color:var(--player-text)!important;
-  font:400 12px/1.4 var(--player-font)!important;min-height:34px;
-  transition:background-color 150ms ease!important
+#player-settings input:not([type=checkbox]) {min-height:26px!important;padding:3px!important}
+#player-settings .check-row {align-items:center;gap:6px!important}
+body input[type=checkbox], body input[type=radio] {
+  outline:0!important;box-shadow:none!important;
+  background:transparent!important;
+  border:0!important;accent-color:#bdbdbd;
 }
-#game-menu-bar .display-panel select:hover,
-body > #panel select:hover,
-body > #panel input:not([type='checkbox']):hover,
-#tv-cast select:hover,.deck-modal select:hover {
-  background:var(--playdeck-control-hover)!important
+body input:is([type=checkbox],[type=radio]):focus-visible {
+  outline:0!important;box-shadow:none!important
 }
-#game-menu-bar .game-menu summary:focus-visible,
-#game-menu-bar .game-display summary:focus-visible,
-#game-menu-bar #badge:focus-visible,
-#toolbar-restore:focus-visible,
-body button:focus-visible,
-body > #panel .deck-section summary:focus-visible,
-body select:focus-visible,body input:focus-visible,body textarea:focus-visible {
-  outline:2px solid #ddd!important;outline-offset:2px!important
-}
-@media(prefers-reduced-motion:reduce) {
-  #game-menu-bar summary,body button,body select,
-  body > #panel .deck-section summary {transition:none!important}
+:root[data-playdeck-appearance='transparent'] :is(#game-menu-bar .game-menu-panel,#game-menu-bar .display-panel,body > #panel,#tv-cast,.deck-modal) {
+  text-shadow:0 1px 3px #000b
 }
 
-/* Secondary rows must not retain a different solid skin inside transparent menus. */
-.deck-file,.deck-recent article,.deck-error-card {
-  background:var(--playdeck-control-surface)!important;
-  border:0!important;box-shadow:none!important;backdrop-filter:none!important
+/* Use the Chromium customizable picker, not the bright native OS popup. */
+@supports (appearance: base-select) {
+  body select, body select::picker(select) {appearance:base-select}
+  body select::picker(select) {
+    background:var(--playdeck-menu-surface)!important;
+    border:var(--playdeck-menu-border)!important;
+    outline:0!important;
+    border-radius:9px!important;
+    color:var(--playdeck-text)!important;
+    box-shadow:var(--playdeck-menu-shadow)!important;
+    backdrop-filter:var(--playdeck-menu-blur)!important;
+    -webkit-backdrop-filter:var(--playdeck-menu-blur)!important;
+    padding:4px!important
+  }
+  body select option {
+    background:transparent!important;color:var(--playdeck-text)!important;
+    padding:6px!important;border:0!important;border-radius:6px!important
+  }
+  body select option:is(:hover,:focus,:checked) {
+    background:transparent!important;color:#fff!important;
+    text-shadow:0 0 7px #ffffff42
+  }
+  body select::picker-icon {color:var(--playdeck-muted)}
+  body select option::checkmark {color:var(--playdeck-text)}
 }
-:root[data-playdeck-appearance='transparent'] #game-menu-bar .game-menu-panel,
-:root[data-playdeck-appearance='transparent'] #game-menu-bar .display-panel,
-:root[data-playdeck-appearance='transparent'] body > #panel,
-:root[data-playdeck-appearance='transparent'] #tv-cast,
-:root[data-playdeck-appearance='transparent'] .deck-modal {
-  text-shadow:0 1px 4px #000c;
+@media(prefers-reduced-motion:reduce) {
+  body button,body select,body input,#game-menu-bar summary,#panel summary {transition:none!important}
 }
