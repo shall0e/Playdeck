@@ -92,7 +92,8 @@ try {
     await appearance.selectOption('glass');
     const button = root.locator('#panel button').first();
     const glass = await button.evaluate(el => getComputedStyle(el).backgroundColor);
-    assert(Number(glass.match(/[\\d.]+/g)?.[3]) > 0, 'Glass buttons remain transparent: ' + glass);
+    const glassAlpha = Number(glass.slice(glass.lastIndexOf(',')+1).replace(')','').trim());
+    assert(glassAlpha > 0, 'Glass buttons remain transparent: ' + glass);
     await appearance.selectOption('transparent');
     const transparent = await button.evaluate(el => getComputedStyle(el).backgroundColor);
     assert.equal(transparent, 'rgba(0, 0, 0, 0)', 'Transparent buttons have a fill');
@@ -102,10 +103,11 @@ try {
     await root.locator('.game-menu > summary').click();
     // While the menu is active, the iframe cannot steal pointer events.
     // Click its visible area through the outer page, which dismisses the menu.
-    await root.locator('body').click({position: {x: 10, y: 150}});
+    await root.locator('html').click({position: {x: 10, y: 150}});
     await root.waitForTimeout(300);
     assert.equal(await root.locator('.game-menu').evaluate(el => el.open), false);
-    assert.equal(await root.locator('#game-menu-bar').evaluate(el => el.classList.contains('is-visible')), false);
+    assert.equal(await root.locator('#game-menu-bar').evaluate(el => el.classList.contains('is-visible')), true,
+      'Explicit toolbar=visible must remain visible after closing its menu');
   }
   for (let attempt = 0; attempt < 6; attempt++) {
     await page.goto(url.href, { waitUntil: 'domcontentloaded' });
