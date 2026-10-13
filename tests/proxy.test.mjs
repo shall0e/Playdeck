@@ -441,3 +441,30 @@ test('asset fetch fallback uses only the initiating launcher session and keeps p
   const invalid=recoverAssetRequest(request,{clientURL:origin+'/player/',session:{...session,game:'another'}});
   assert.equal(invalid.url,request.url);
 });
+
+test('launcher URL recovers root JSON and binary assets after service worker loses session state', () => {
+  const launcher=origin+'/player/?url='+encodeURIComponent('https://zombies.mdelworkstation.cc/');
+  for (const file of ['/packs/zm_transit/dist/manifest.json','/packs/zm_transit/dist/level.data']) {
+    const request=new Request(origin+file);
+    const recovered=recoverAssetRequest(request,{clientURL:launcher});
+    assert.equal(new URL(recovered.url).pathname,'/player/games/zombies.mdelworkstation.cc'+file);
+    assert.equal(recoverGameRequest(request,[launcher]).url,recovered.url);
+  }
+  assert.equal(recoverGameRequest(new Request(origin+'/player/version.js'),[launcher]).url,origin+'/player/version.js');
+  assert.equal(recoverGameRequest(new Request(origin+'/games.json'),[launcher]).url,origin+'/games.json');
+  assert.equal(recoverGameRequest(new Request(origin+'/packs/zm_transit/dist/manifest.json'),[origin+'/player/?url=http%3A%2F%2Funsafe.test%2F']).url,origin+'/packs/zm_transit/dist/manifest.json');
+});
+
+test('server proxy recovers root manifest from launcher referrer if service worker is absent', async () => {
+  const originalFetch=globalThis.fetch,calls=[];
+  globalThis.fetch=async url=>{calls.push(String(url));return Response.json({packs:[]});};
+  try {
+    const launcher=origin+'/player/?url='+encodeURIComponent('https://zombies.mdelworkstation.cc/');
+    const response=await worker.fetch(
+      new Request(origin+'/packs/zm_transit/dist/manifest.json',{headers:{referer:launcher}}),
+      {ASSETS:{fetch(){throw Error('Missing game assets must not hit Pages HTML fallback');}}}
+    );
+    assert.deepEqual(await response.json(),{packs:[]});
+    assert.equal(calls[0],'https://zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.json');
+  } finally {globalThis.fetch=originalFetch;}
+});
