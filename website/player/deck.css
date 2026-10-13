@@ -167,3 +167,16 @@ body select:focus-visible,body input:focus-visible,body textarea:focus-visible {
   #game-menu-bar summary,body button,body select,
   body > #panel .deck-section summary {transition:none!important}
 }
+
+/* Secondary rows must not retain a different solid skin inside transparent menus. */
+.deck-file,.deck-recent article,.deck-error-card {
+  background:var(--playdeck-control-surface)!important;
+  border:0!important;box-shadow:none!important;backdrop-filter:none!important
+}
+:root[data-playdeck-appearance='transparent'] #game-menu-bar .game-menu-panel,
+:root[data-playdeck-appearance='transparent'] #game-menu-bar .display-panel,
+:root[data-playdeck-appearance='transparent'] body > #panel,
+:root[data-playdeck-appearance='transparent'] #tv-cast,
+:root[data-playdeck-appearance='transparent'] .deck-modal {
+  text-shadow:0 1px 4px #000c;
+}
