@@ -90,7 +90,12 @@ try {
     await root.locator('#badge').click();
     const appearance = root.locator('#player-settings select[name="appearance"]');
     await appearance.selectOption('glass');
-    const button = root.locator('#panel button').first();
+    const button = root.locator('body > #panel button').first();
+    const controllerToggle = root.locator('#toggle');
+    console.log('Appearance button target',JSON.stringify(await button.evaluate(el => ({
+      tag:el.tagName,id:el.id,shadow:el.getRootNode()!==document,
+      background:getComputedStyle(el).backgroundColor
+    }))));
     const glass = await button.evaluate(el => getComputedStyle(el).backgroundColor);
     const glassAlpha = Number(glass.slice(glass.lastIndexOf(',')+1).replace(')','').trim());
     assert(glassAlpha > 0, 'Glass buttons remain transparent: ' + glass);
@@ -103,7 +108,10 @@ try {
       status:document.querySelector('[data-settings-status]')?.textContent
     }))));
     const transparent = await button.evaluate(el => getComputedStyle(el).backgroundColor);
-    assert.equal(transparent, 'rgba(0, 0, 0, 0)', 'Transparent buttons have a fill');
+    assert.equal(transparent, 'rgba(0, 0, 0, 0)', 'Transparent Settings buttons have a fill');
+    const controllerTransparent = await controllerToggle.evaluate(el => getComputedStyle(el).backgroundColor);
+    assert.equal(controllerTransparent, 'rgba(0, 0, 0, 0)',
+      'Transparent Controller toolbar button has a fill');
     await appearance.selectOption('glass');
     await root.locator('#badge').click();
     // Game-frame clicks should retract the open menu and then the toolbar.
