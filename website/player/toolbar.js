@@ -39,14 +39,12 @@ export function installToolbar(bar, settingsPanel, {getFrame, alwaysVisible = fa
   function reveal() {
     clearTimeout(hideTimer);
     bar.classList.add('is-visible');
-    bar.inert = false;
     edge.setAttribute('aria-expanded', 'true');
   }
   function hide(force = false) {
     if(alwaysVisible || closing) return;
     if(!force && (hasOpen() || pointerOver || bar.matches(':focus-within'))) return;
     bar.classList.remove('is-visible');
-    bar.inert = true;
     edge.setAttribute('aria-expanded', 'false');
   }
   function scheduleHide() {
@@ -183,7 +181,8 @@ export function installToolbar(bar, settingsPanel, {getFrame, alwaysVisible = fa
       if(document.activeElement === getFrame?.()) dismiss();
     },0);
   });
-  bar.inert = true;
+  // CSS visibility/pointer-events suppress hidden chrome. Setting inert here
+  // made the entire expanded menu non-hit-testable after some state changes.
   if(alwaysVisible) reveal();
   return {
     show, attach, dismiss,

@@ -698,3 +698,14 @@ body > #panel button {
   pointer-events:auto!important;
 }
 #game-menu-bar > * {filter:none!important}
+
+/* Hidden toolbar is removed from keyboard navigation by visibility, not inert:
+   inert can make absolutely positioned open popup descendants non-hit-testable. */
+#game-menu-bar:not(.is-visible) {
+  visibility:hidden!important;
+  transition:visibility 0s linear 190ms,opacity 190ms ease,translate 190ms ease!important;
+}
+#game-menu-bar.is-visible {
+  visibility:visible!important;
+  transition:visibility 0s linear 0s,opacity 190ms ease,translate 190ms ease!important;
+}

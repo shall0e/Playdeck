@@ -62,7 +62,7 @@ test('edge toolbar hides by default, reveals on hover or tap, and stays open for
     const api = installToolbar(bar, panel, {
       getFrame: () => ({ getBoundingClientRect: () => ({ top: 0, height: 800 }) }),
     });
-    assert.equal(bar.inert, true);
+    assert.equal(bar.inert, false);
     assert.equal(bar.classes.has('is-visible'), false);
     doc.fire('pointermove', { clientY: 780, pointerType: 'mouse' });
     assert.equal(bar.inert, false);

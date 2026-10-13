@@ -78,12 +78,12 @@ try {
       const rect=el.getBoundingClientRect(),x=rect.left+rect.width/2,y=rect.top+rect.height/2;
       const bar=document.querySelector('#game-menu-bar');
       return {buttonRect:rect.toJSON(),hit:document.elementFromPoint(x,y)?.outerHTML?.slice(0,240),
-        barClass:bar.className,barStyle:getComputedStyle(bar).cssText,
+        barClass:bar.className,barInert:bar.inert,barVisibility:getComputedStyle(bar).visibility,barStyle:getComputedStyle(bar).cssText,
         barPointer:getComputedStyle(bar).pointerEvents,barZ:getComputedStyle(bar).zIndex,
         panelPointer:getComputedStyle(el).pointerEvents,
         frameZ:getComputedStyle(document.querySelector('iframe')).zIndex};
     })));
-    await castButton.click();
+    await castButton.click({timeout:5000});
     assert.equal(await root.locator('#tv-cast').evaluate(dialog => dialog.open), true);
     await root.locator('#tv-cast button[aria-label="Close"]').click();
     // Original Glass controls must have filled backgrounds; Transparent must not.
