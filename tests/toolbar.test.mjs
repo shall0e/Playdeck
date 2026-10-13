@@ -31,6 +31,9 @@ test('edge toolbar hides by default, reveals on hover or tap, and stays open for
     matches() {
       return false;
     }
+    contains(child) {
+      return this.children.includes(child);
+    }
     fire(type, event = {}) {
       this.events.get(type)?.(event);
     }
@@ -41,6 +44,7 @@ test('edge toolbar hides by default, reveals on hover or tap, and stays open for
   doc.createElement = () => new Element();
   doc.body = new Element();
   doc.pointerLockElement = null;
+  doc.dispatchEvent = (event) => doc.fire(event.type, event);
   globalThis.document = doc;
   globalThis.innerHeight = 800;
   try {
@@ -48,6 +52,13 @@ test('edge toolbar hides by default, reveals on hover or tap, and stays open for
     bar.id = 'game-menu-bar';
     const panel = new Element();
     panel.hidden = true;
+    const details = new Element();
+    const badge = new Element();
+    badge.focus = () => {};
+    bar.querySelectorAll = (selector) => selector === 'details' ? [details] : [];
+    bar.querySelector = (selector) => selector === '#badge' ? badge : null;
+    let dismissed = 0;
+    doc.addEventListener('playdeck:game-interaction', () => { dismissed++; });
     const api = installToolbar(bar, panel, {
       getFrame: () => ({ getBoundingClientRect: () => ({ top: 0, height: 800 }) }),
     });
@@ -74,6 +85,15 @@ test('edge toolbar hides by default, reveals on hover or tap, and stays open for
     api.attach(child);
     child.fire('pointermove', { clientY: 799, pointerType: 'mouse' });
     assert.equal(bar.classes.has('is-visible'), true);
+    // A game iframe click must close every menu, not leave the game paused.
+    panel.hidden = false;
+    details.open = true;
+    child.fire('pointerdown');
+    assert.equal(panel.hidden, true);
+    assert.equal(details.open, false);
+    assert.equal(badge.attrs['aria-expanded'], 'false');
+    assert.equal(dismissed, 1);
+    assert.equal(bar.classes.has('is-visible'), false);
     child.pointerLockElement = {};
     child.fire('pointerlockchange');
     assert.equal(bar.classes.has('is-visible'), false);
