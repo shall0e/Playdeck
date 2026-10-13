@@ -19,3 +19,6 @@
 - Touch controls, Playback, Diagnostics, calibration and controller presets remain removed. Response curve belongs in controller Advanced settings.
 - Saves supports export/import; profile export/import stays collapsed under Settings backup.
 - Game files use Cache Storage, with IndexedDB only for interrupted downloads. Check canonical locally saved game files before the Cloudflare Worker, without network hash checks for hits. Mark served local responses with `X-Playdeck-Cache: HIT`. Only missing, invalid, non-cacheable, or explicitly updated resources use the network.
+
+- Player motion: opening any menu or controller overlay fades, deblurs, expands and slides its panel/controls into place. On dismissal, reverse the panel animation **completely before** retracting the toolbar. Use the central `installToolbar` menu lifecycle for parent and game-iframe outside clicks; do not set `hidden` or `details.open=false` in separate outside-click listeners that bypass its exit sequence. Keep the controller shadow DOM and Settings detail transitions synchronized.
+- Preserve reduced-motion preferences: skip animation AND JS waiting time when `prefers-reduced-motion: reduce` is active. Outside-click retraction must clear toolbar focus and avoid immediate re-reveal until the cursor leaves the bottom activation zone.

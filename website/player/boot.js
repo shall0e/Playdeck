@@ -210,13 +210,6 @@ gameMenu.addEventListener('click', (event) => {
   }
   parent.postMessage({ type: 'playdeck:menu-action', action }, parentOrigin);
 });
-document.addEventListener(
-  'pointerdown',
-  (event) => {
-    if (!event.composedPath().includes(gameMenu)) gameMenu.open = false;
-  },
-  true,
-);
 const menuStyle = document.createElement('style');
 menuStyle.textContent =
   '#game-menu-bar{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;z-index:2147483646}#game-menu-bar #badge{position:static;font:12px system-ui,sans-serif;white-space:nowrap}#panel{right:auto;left:50%;transform:translateX(-50%);bottom:68px}body{overflow:hidden}';
@@ -798,11 +791,6 @@ extrasToggle.querySelector('input').onchange = (event) => {
     cleanupHidden.clear();
   } else for (const doc of cleanupDocuments) doc.dispatchEvent(new Event('timebomb:clean-extras'));
 };
-document.addEventListener('timebomb:menu-open', (event) => {
-  if (event.detail !== 'game') gameMenu.open = false;
-  if (event.detail !== 'sandbox') closeSandboxPanel();
-  if (event.detail !== 'display' && displayMenu) displayMenu.open = false;
-});
 function announceMenu(name) {
   document.dispatchEvent(new CustomEvent('timebomb:menu-open', { detail: name }));
 }
@@ -860,24 +848,6 @@ function configChild() {
       location.origin,
     );
 }
-function closeSandboxPanel() {
-  $('#panel').hidden = true;
-  $('#badge').setAttribute('aria-expanded', 'false');
-}
-document.addEventListener(
-  'pointerdown',
-  (event) => {
-    if (displayMenu && !event.composedPath().includes(displayMenu)) displayMenu.open = false;
-    if (!event.composedPath().includes($('#panel')) && !event.composedPath().includes($('#badge')))
-      closeSandboxPanel();
-  },
-  true,
-);
-window.addEventListener('blur', () =>
-  setTimeout(() => {
-    if (document.activeElement === frame) closeSandboxPanel();
-  }, 0),
-);
 
 let gameFailureReported = false,
   enginePoll;
@@ -1116,10 +1086,7 @@ function mount(url) {
 }
 $('#retry').onclick = () => location.reload();
 $('#badge').onclick = () => {
-  const opening = $('#panel').hidden;
-  if (opening) announceMenu('sandbox');
-  $('#panel').hidden = !opening;
-  $('#badge').setAttribute('aria-expanded', String(!$('#panel').hidden));
+  toolbar.toggleSettings();
   refreshStats();
 };
 async function clearDownloads(currentOnly) {

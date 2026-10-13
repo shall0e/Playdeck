@@ -636,6 +636,43 @@ export function installController({ profileId, getFrame, forceMapping = false })
     }
     #panel {scrollbar-width:none!important;scrollbar-gutter:auto!important;overflow-x:hidden!important}
     @media(prefers-reduced-motion:reduce){#panel :is(button,input,select,summary),#toggle{transition:none!important}}
+
+    /* Shared layered motion: panel closes before the toolbar retracts. */
+    #panel:not([hidden]){animation:playdeck-panel-enter 230ms cubic-bezier(.16,1,.3,1) both}
+    #panel.playdeck-closing{animation:playdeck-panel-exit 210ms cubic-bezier(.4,0,1,1) both;pointer-events:none}
+    #panel:not([hidden]) > header,#panel:not([hidden]) > .row,
+    #panel:not([hidden]) > p {
+      animation:playdeck-control-enter 240ms cubic-bezier(.16,1,.3,1) both
+    }
+    @keyframes playdeck-panel-enter{
+      from{opacity:0;filter:blur(9px);translate:0 12px;scale:.955}
+      to{opacity:1;filter:blur(0);translate:0 0;scale:1}
+    }
+    @keyframes playdeck-panel-exit{
+      from{opacity:1;filter:blur(0);translate:0 0;scale:1}
+      to{opacity:0;filter:blur(9px);translate:0 12px;scale:.955}
+    }
+    @keyframes playdeck-control-enter{
+      from{opacity:0;filter:blur(3px);translate:0 5px}
+      to{opacity:1;filter:blur(0);translate:0 0}
+    }
+    #panel details::details-content{
+      content-visibility:visible;
+      overflow:clip;height:0;opacity:0;filter:blur(4px);translate:0 -5px;
+      transition:height 220ms cubic-bezier(.16,1,.3,1),
+        opacity 200ms ease,filter 220ms ease,translate 220ms ease;
+      transition-behavior:allow-discrete
+    }
+    #panel details[open]::details-content{
+      height:auto;opacity:1;filter:blur(0);translate:0 0
+    }
+    @supports(interpolate-size:allow-keywords){#panel details{interpolate-size:allow-keywords}}
+    @media(prefers-reduced-motion:reduce){
+      #panel,#panel.playdeck-closing,#panel > *,#panel details::details-content{
+        animation:none!important;transition:none!important;
+        filter:none!important;translate:none!important;scale:1!important
+      }
+    }
   </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
   <section id="panel" hidden aria-label="Controller settings"><header><h2>Controller mapping</h2></header>
   <p id="status" role="status">Connect a controller and press a button.</p>
@@ -696,9 +733,6 @@ export function installController({ profileId, getFrame, forceMapping = false })
     $('#looky').value = String(config.look.y);
     $('#pad').value = config.pad;
   }
-  document.addEventListener('timebomb:menu-open', (event) => {
-    if (event.detail !== 'controller' && open) setOpen(false);
-  });
   document.addEventListener('playdeck:game-interaction', () => {
     if (open) setOpen(false);
   });
@@ -706,25 +740,17 @@ export function installController({ profileId, getFrame, forceMapping = false })
     if (value)
       document.dispatchEvent(new CustomEvent('timebomb:menu-open', { detail: 'controller' }));
     open = value;
+    $('#panel').classList.remove('playdeck-closing');
     $('#panel').hidden = !value;
     $('#toggle').setAttribute('aria-expanded', String(value));
     if (!value) {
       save();
     }
   }
-  $('#toggle').onclick = () => setOpen(!open);
-  document.addEventListener(
-    'pointerdown',
-    (event) => {
-      if (open && !event.composedPath().includes(host)) setOpen(false);
-    },
-    true,
-  );
-  window.addEventListener('blur', () =>
-    setTimeout(() => {
-      if (open && document.activeElement === getFrame()) setOpen(false);
-    }, 0),
-  );
+  $('#toggle').onclick = () => {
+    if(open)document.dispatchEvent(new Event('playdeck:request-close'));
+    else setOpen(true);
+  };
   $('#enable').onchange = (event) => {
     config.enabled = event.target.checked;
     save();

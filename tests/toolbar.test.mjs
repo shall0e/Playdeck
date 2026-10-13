@@ -89,11 +89,27 @@ test('edge toolbar hides by default, reveals on hover or tap, and stays open for
     panel.hidden = false;
     details.open = true;
     child.fire('pointerdown');
+    // First the menu retracts, then and only then does the toolbar disappear.
+    assert.equal(panel.hidden, false);
+    assert.equal(bar.classes.has('is-visible'), true);
+    t.mock.timers.tick(209);
+    assert.equal(panel.hidden, false);
+    assert.equal(bar.classes.has('is-visible'), true);
+    t.mock.timers.tick(1);
     assert.equal(panel.hidden, true);
     assert.equal(details.open, false);
     assert.equal(badge.attrs['aria-expanded'], 'false');
     assert.equal(dismissed, 1);
     assert.equal(bar.classes.has('is-visible'), false);
+    // Outside clicks on the launcher obey the same sequence.
+    api.show();
+    panel.hidden = false;
+    doc.fire('pointerdown', {target:{},composedPath:()=>[]});
+    assert.equal(panel.hidden,false);
+    assert.equal(bar.classes.has('is-visible'),true);
+    t.mock.timers.tick(210);
+    assert.equal(panel.hidden,true);
+    assert.equal(bar.classes.has('is-visible'),false);
     child.pointerLockElement = {};
     child.fire('pointerlockchange');
     assert.equal(bar.classes.has('is-visible'), false);
