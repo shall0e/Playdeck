@@ -70,6 +70,30 @@ try {
     await root.locator('#performance-control select').waitFor({ state: 'visible' });
     assert.equal(await root.locator('#performance-control select option').count(), 4);
     await root.locator('#badge').click();
+    // Exercise real pointer input, not only icon selectors. This catches the
+    // toolbar transforms/inert state that previously blocked menu actions.
+    await root.locator('.game-menu > summary').click();
+    await root.locator('.game-menu-panel [data-action="cast"]').click();
+    assert.equal(await root.locator('#tv-cast').evaluate(dialog => dialog.open), true);
+    await root.locator('#tv-cast button[aria-label="Close"]').click();
+    // Original Glass controls must have filled backgrounds; Transparent must not.
+    await root.locator('#badge').click();
+    const appearance = root.locator('#player-settings select[name="appearance"]');
+    await appearance.selectOption('glass');
+    const button = root.locator('#panel button').first();
+    const glass = await button.evaluate(el => getComputedStyle(el).backgroundColor);
+    assert(Number(glass.match(/[\\d.]+/g)?.[3]) > 0, 'Glass buttons remain transparent: ' + glass);
+    await appearance.selectOption('transparent');
+    const transparent = await button.evaluate(el => getComputedStyle(el).backgroundColor);
+    assert.equal(transparent, 'rgba(0, 0, 0, 0)', 'Transparent buttons have a fill');
+    await appearance.selectOption('glass');
+    await root.locator('#badge').click();
+    // Game-frame clicks should retract the open menu and then the toolbar.
+    await root.locator('.game-menu > summary').click();
+    await root.frameLocator('iframe').locator('body').click({position: {x: 10, y: 10}});
+    await root.waitForTimeout(300);
+    assert.equal(await root.locator('.game-menu').evaluate(el => el.open), false);
+    assert.equal(await root.locator('#game-menu-bar').evaluate(el => el.classList.contains('is-visible')), false);
   }
   for (let attempt = 0; attempt < 6; attempt++) {
     await page.goto(url.href, { waitUntil: 'domcontentloaded' });
