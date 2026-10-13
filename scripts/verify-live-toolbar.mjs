@@ -88,36 +88,20 @@ try {
     await root.locator('#tv-cast button[aria-label="Close"]').click();
     console.log('Player stylesheet URLs',JSON.stringify(await root.locator('html').evaluate(() =>
       Array.from(document.querySelectorAll('link[rel="stylesheet"]'),el=>el.href))));
-    // Controls remain unfilled in both outer-panel appearances.
+    // Glass is the only theme; relocated controls retain their shared styles.
     await root.locator('#badge').click();
-    const appearance = root.locator('#player-settings select[name="appearance"]');
-    await appearance.selectOption('glass');
-    await root.waitForTimeout(180); // Allow the shared 130 ms color transition to finish.
-    const button = root.locator('body > #panel button').first();
-    const controllerToggle = root.locator('#toggle');
-    console.log('Appearance button target',JSON.stringify(await button.evaluate(el => ({
-      tag:el.tagName,id:el.id,shadow:el.getRootNode()!==document,
-      background:getComputedStyle(el).backgroundColor
-    }))));
-    const glass = await button.evaluate(el => getComputedStyle(el).backgroundColor);
-    assert.equal(glass, 'rgba(0, 0, 0, 0)', 'Glass Settings buttons have a fill');
-    assert.equal(await controllerToggle.evaluate(el => getComputedStyle(el).backgroundColor),
-      'rgba(0, 0, 0, 0)', 'Glass Controller toolbar button has a fill');
-    await appearance.selectOption('transparent');
-    await root.waitForTimeout(180);
-    console.log('Appearance selection', JSON.stringify(await root.locator('html').evaluate(html => ({
-      theme:html.dataset.playdeckAppearance,
-      rootControlBg:getComputedStyle(html).getPropertyValue('--playdeck-control-bg'),
-      buttonControlBg:getComputedStyle(document.querySelector('#panel button')).getPropertyValue('--playdeck-control-bg'),
-      selected:document.querySelector('#player-settings [name="appearance"]')?.value,
-      status:document.querySelector('[data-settings-status]')?.textContent
-    }))));
-    const transparent = await button.evaluate(el => getComputedStyle(el).backgroundColor);
-    assert.equal(transparent, 'rgba(0, 0, 0, 0)', 'Transparent Settings buttons have a fill');
-    const controllerTransparent = await controllerToggle.evaluate(el => getComputedStyle(el).backgroundColor);
-    assert.equal(controllerTransparent, 'rgba(0, 0, 0, 0)',
-      'Transparent Controller toolbar button has a fill');
-    await appearance.selectOption('glass');
+    assert.equal(await root.locator('select[name="appearance"]').count(),0);
+    const compatibility=root.locator('body > #panel .deck-section').filter({has:root.locator('summary',{hasText:'Compatibility'})});
+    await compatibility.locator('summary').first().click();
+    assert.equal(await compatibility.locator('#performance-control select').isVisible(),true);
+    const button=compatibility.locator('button').first();
+    assert.equal(await button.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
+    const order=await root.locator('body > #panel > details > summary').allTextContents();
+    assert.deepEqual(order,['Compatibility','Downloads','Saves','Misc','About and sharing']);
+    const misc=root.locator('body > #panel [data-misc-settings]');
+    await misc.locator('summary').click();
+    assert.equal(await misc.locator('#hide-page-extras input').isVisible(),true);
+    assert.equal(await root.locator('#toggle').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
     await root.locator('#badge').click();
     // Game-frame clicks should retract the open menu and then the toolbar.
     await root.locator('.game-menu > summary').click();

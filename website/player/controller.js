@@ -687,7 +687,23 @@ export function installController({ profileId, getFrame, forceMapping = false })
         animation:none!important;filter:none!important
       }
     }
-  </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
+
+    #toggle::before {content:'▸';margin-right:6px;color:var(--playdeck-muted,#aaa)}
+    #toggle[aria-expanded=true]::before {content:'▾'}
+    #panel summary::before {content:'▸';display:inline-block;flex:0 0 12px;margin-right:6px;color:var(--playdeck-muted,#aaa)}
+    #panel details[open] > summary::before {content:'▾'}
+    #panel label:has(> input[type=checkbox]) {display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important}
+    #panel label > input[type=checkbox] {order:-1;flex:0 0 auto;margin:0!important}
+    @supports (appearance:base-select) {
+      #panel select::picker-icon {order:-1;margin-inline-start:0!important;margin-inline-end:7px!important}
+      #panel select:not([multiple]) {justify-content:flex-start!important}
+    }
+    @supports not (appearance:base-select) {
+      #panel select:not([multiple]) {appearance:none!important;padding-inline-start:20px!important;
+        background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='m3 4 3 4 3-4' fill='none' stroke='%23aaa' stroke-width='1.5'/%3E%3C/svg%3E")!important;
+        background-position:3px center!important;background-size:12px!important;background-repeat:no-repeat!important}
+    }
+</style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
   <section id="panel" hidden aria-label="Controller settings"><header><h2>Controller mapping</h2></header>
   <p id="status" role="status">Connect a controller and press a button.</p>
   <div class="row"><label for="pad">Controller</label><select id="pad"><option value="auto">First connected</option></select></div>

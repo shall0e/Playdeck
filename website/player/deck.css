@@ -12,12 +12,6 @@
   --playdeck-hover-text: #fff;
   --playdeck-muted: #aaa;
 }
-:root[data-playdeck-appearance='transparent'] {
-  --playdeck-menu-surface: transparent;
-  --playdeck-menu-blur: none;
-  --playdeck-menu-shadow: none;
-  --playdeck-menu-border: 1px solid rgba(255,255,255,.50);
-}
 
 /* Only the OUTER panels can have a background or border. */
 #game-menu-bar .game-menu-panel,
@@ -155,9 +149,6 @@ body input[type=checkbox], body input[type=radio] {
 body input:is([type=checkbox],[type=radio]):focus-visible {
   outline:0!important;box-shadow:none!important
 }
-:root[data-playdeck-appearance='transparent'] :is(#game-menu-bar .game-menu-panel,#game-menu-bar .display-panel,body > #panel,#tv-cast,.deck-modal) {
-  text-shadow:0 1px 3px #000b
-}
 
 /* Use the Chromium customizable picker, not the bright native OS popup. */
 @supports (appearance: base-select) {
@@ -233,21 +224,15 @@ body > #panel :is(summary,button,select,input,textarea):is(:focus,:focus-visible
 #panel .deck-section summary::marker {content:""!important}
 #panel .deck-section summary::-webkit-details-marker {display:none!important}
 #panel .deck-section summary::after {content:none!important}
-#player-settings [data-misc-settings] {margin:4px 0!important}
-#player-settings [data-misc-settings] label {display:flex;align-items:center;justify-content:space-between;gap:8px!important;margin:7px 0!important}
-#player-settings [data-misc-settings] input {min-width:0;max-width:130px}
+#panel [data-misc-settings] {margin:4px 0!important}
+#panel [data-misc-settings] label {display:flex;align-items:center;justify-content:space-between;gap:8px!important;margin:7px 0!important}
+#panel [data-misc-settings] input {min-width:0;max-width:130px}
 #panel [data-force-row] {display:flex;justify-content:space-between;align-items:center}
 #panel [data-force-row][hidden] {display:none!important}
 
 /* Stable panel animations: opacity and vertical movement only. No scale,
    transformed toolbar children, or clipped details-content during interaction. */
 :root {
-  --playdeck-control-bg: transparent;
-  --playdeck-field-bg: transparent;
-  --playdeck-control-hover-bg: transparent;
-  --playdeck-control-active-bg: transparent;
-}
-:root[data-playdeck-appearance='transparent'] {
   --playdeck-control-bg: transparent;
   --playdeck-field-bg: transparent;
   --playdeck-control-hover-bg: transparent;
@@ -335,13 +320,26 @@ body > #panel.playdeck-closing {
   }
 }
 
-/* Mode-specific enforcement wins over legacy !important player rules.
-   All interactive chrome is completely unfilled in Transparent mode. */
-:root[data-playdeck-appearance='transparent'] #game-menu-bar :is(button,summary,select,input,textarea),
-:root[data-playdeck-appearance='transparent'] body > #panel :is(button,summary,select,input,textarea),
-:root[data-playdeck-appearance='transparent'] #tv-cast :is(button,summary,select,input,textarea),
-:root[data-playdeck-appearance='transparent'] .deck-modal :is(button,summary,select,input,textarea) {
-  background:transparent!important;
-  background-color:transparent!important;
-  box-shadow:none!important;
+
+
+/* Glass-only menus share left-side disclosure indicators and checkboxes. */
+#game-menu-bar summary::before, #panel summary::before, #tv-cast summary::before,
+.deck-modal summary::before {content:'▸';display:inline-block;flex:0 0 12px;margin-right:6px;color:var(--playdeck-muted)}
+#game-menu-bar details[open] > summary::before, #panel details[open] > summary::before,
+#tv-cast details[open] > summary::before, .deck-modal details[open] > summary::before {content:'▾'}
+body label:has(> input[type=checkbox]), body label:has(> input[type=radio]) {
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;
 }
+body label > input:is([type=checkbox],[type=radio]) {order:-1;flex:0 0 auto;margin:0!important}
+@supports (appearance:base-select) {
+  body select::picker-icon {order:-1;margin-inline-start:0!important;margin-inline-end:7px!important}
+  body select:not([multiple]) {justify-content:flex-start!important}
+}
+@supports not (appearance:base-select) {
+  body select:not([multiple]) {appearance:none!important;padding-inline-start:20px!important;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='m3 4 3 4 3-4' fill='none' stroke='%23aaa' stroke-width='1.5'/%3E%3C/svg%3E")!important;
+    background-position:3px center!important;background-size:12px!important;background-repeat:no-repeat!important}
+}
+
+#game-menu-bar #badge::before {content:'▸';margin-right:6px;color:var(--playdeck-muted)}
+#game-menu-bar #badge[aria-expanded=true]::before {content:'▾'}

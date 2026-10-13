@@ -219,7 +219,8 @@ menuStyle.textContent =
 document.head.append(menuStyle);
 function alignMenuPanels() {
   const host = menuBar.firstElementChild;
-  const panelLeft = (innerWidth - Math.min(300, innerWidth - 20)) / 2;
+  const menuWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--playdeck-menu-width')) || 258;
+  const panelLeft = (innerWidth - Math.min(menuWidth, innerWidth - 20)) / 2;
   if (host && host !== $('#badge'))
     host.style.setProperty(
       '--menu-panel-offset',
@@ -512,14 +513,14 @@ function setupDisplay(data) {
     });
   }
   displayMenu.hidden = !data.config;
-  gameDisplay = data.config ? data.selection || { ratio: '16:9', mode: 'stretch' } : null;
+  gameDisplay = data.config ? data.selection || { ratio: 'auto', mode: 'stretch' } : null;
   if (data.config) {
     const select = displayMenu.querySelector('[data-display-ratio]');
     select.replaceChildren(
       ...data.config.ratios.map((r) => {
         const option = document.createElement('option');
         option.value = r;
-        option.textContent = r === 'auto' ? 'Screen' : r==='16:9'?'16:9 · fill screen':r;
+        option.textContent = r === 'auto' ? 'Screen' : r;
         return option;
       }),
     );
@@ -655,6 +656,7 @@ const cleanupDocuments = new Set(),
 const extrasToggle = document.createElement('label');
 extrasToggle.style.cssText =
   'display:flex;align-items:center;gap:8px;margin-top:16px;font-size:13px';
+extrasToggle.id = 'hide-page-extras';
 extrasToggle.innerHTML = '<input type="checkbox"> Hide page extras';
 extrasToggle.querySelector('input').checked = hidePageExtras;
 $('#panel').append(extrasToggle);

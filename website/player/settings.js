@@ -20,7 +20,7 @@ export function validateSettings(value = {}) {
     throw new Error('Choose a valid panic shortcut.');
   return {
     forceController: value.forceController === true,
-    appearance: value.appearance === 'transparent' ? 'transparent' : 'glass',
+    appearance: 'glass',
     panicURL: url.href,
     panicBind: {
       code: bind.code,
@@ -97,14 +97,13 @@ export function installSettings(
   const form = document.createElement('form');
   form.id = 'player-settings';
   form.innerHTML =
-    '<h2>Settings</h2><label>Menu appearance<select name="appearance" aria-label="Menu appearance"><option value="glass">Glass</option><option value="transparent">Transparent</option></select></label><label class="check-row" data-force-row><input name="forceController" type="checkbox">Force controller mapping</label><details class="deck-section" data-misc-settings><summary>Misc</summary><label class="shortcut-row">Panic key<input name="panicKey" readonly aria-label="Panic shortcut" title="Click and press a shortcut"></label><label>Panic destination<input name="panicURL" type="url" required aria-label="Panic destination"></label></details><p data-settings-status role="status"></p>';
+    '<h2>Settings</h2><label class="check-row" data-force-row><input name="forceController" type="checkbox">Force controller mapping</label><details class="deck-section" data-misc-settings><summary>Misc</summary><label class="shortcut-row">Panic key<input name="panicKey" readonly aria-label="Panic shortcut" title="Click and press a shortcut"></label><label>Panic destination<input name="panicURL" type="url" required aria-label="Panic destination"></label></details><p data-settings-status role="status"></p>';
   // The compatibility toggle is moved into the shared Compatibility section.
   // Keep the original element reference so auto-save works outside this form.
-  const forceControl = form.querySelector('[name="forceController"]');
-  const field = (name) => name === 'forceController' ? forceControl : form.elements.namedItem(name),
+  const controls = Object.fromEntries([...form.querySelectorAll('[name]')].map(input => [input.name, input]));
+  const field = (name) => controls[name],
     status = form.querySelector('[data-settings-status]');
   form.querySelector('[data-force-row]').hidden = nativeGamepad || !gameURL;
-  field('appearance').value = settings.appearance || 'glass';
   field('forceController').checked = settings.forceController && !nativeGamepad;
   field('panicKey').value = bindLabel(settings.panicBind);
   field('panicURL').value = settings.panicURL;
@@ -113,7 +112,7 @@ export function installSettings(
       const next = validateSettings({
         ...draft,
         forceController: !nativeGamepad && !!gameURL && field('forceController').checked,
-        appearance: field('appearance').value,
+        appearance: 'glass',
         panicURL: field('panicURL').value,
       });
       let stored = true;
@@ -132,17 +131,6 @@ export function installSettings(
       status.textContent = error.message;
     }
   }
-  const applyAppearance = () => {
-    // Paint the selected style before saving. This also works when browser
-    // storage is unavailable or a different preference is invalid.
-    document.documentElement.dataset.playdeckAppearance =
-      field('appearance').value === 'transparent' ? 'transparent' : 'glass';
-  };
-  field('appearance').addEventListener('input', applyAppearance);
-  field('appearance').addEventListener('change', () => {
-    applyAppearance();
-    save();
-  });
   field('forceController').addEventListener('change', save);
   field('panicURL').addEventListener('change', save);
   field('panicKey').addEventListener('keydown', (event) => {

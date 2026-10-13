@@ -120,14 +120,14 @@ export function displayConfig(value) {
   if (!Array.isArray(ratios) || !ratios.length || ratios.some((r) => !supported.includes(r)))
     throw new Error('Invalid display ratios');
   const ratio =
-      config.ratio || config.defaultRatio || (ratios.includes('16:9') ? '16:9' : ratios[0]),
+      config.ratio || config.defaultRatio || (ratios.includes('auto') ? 'auto' : ratios[0]),
     mode = 'stretch';
   if (!ratios.includes(ratio)) throw new Error('Invalid display selection');
   return { ratios: [...new Set(ratios)], ratio, mode };
 }
 
-export function canvasDisplayBox(width, height, ratio = '16:9') {
-  if (ratio === '16:9' || ratio === 'auto') return { width, height, left: 0, top: 0 };
+export function canvasDisplayBox(width, height, ratio = 'auto') {
+  if (ratio === 'auto') return { width, height, left: 0, top: 0 };
   const [x, y] = ratio.split(':').map(Number),
     aspect = x / y;
   if (!(aspect > 0)) return { width, height, left: 0, top: 0 };

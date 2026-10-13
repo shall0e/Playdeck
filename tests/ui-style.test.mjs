@@ -7,7 +7,7 @@ test('every Playdeck menu shares an unfilled compact control system', () => {
   const controller=readFileSync(new URL('../website/player/controller.js',import.meta.url),'utf8');
   const agents=readFileSync(new URL('../AGENTS.md',import.meta.url),'utf8');
   assert.match(css,/--playdeck-menu-width:\s*258px/);
-  assert.match(css,/--playdeck-menu-border:\s*1px solid rgba\(255,255,255/);
+  assert.match(css,/--playdeck-menu-border:\s*0px solid transparent/);
   assert.match(css,/#game-menu-bar \.game-menu-panel/);
   assert.match(css,/#game-menu-bar \.display-panel/);
   assert.match(css,/body > #panel/);
@@ -24,16 +24,16 @@ test('settings categories own their existing controls without breaking saved val
   const css=readFileSync(new URL('../website/player/deck.css',import.meta.url),'utf8');
   const controller=readFileSync(new URL('../website/player/controller.js',import.meta.url),'utf8');
   assert.match(settings,/<details class="deck-section" data-misc-settings><summary>Misc<\/summary>/);
-  assert.match(settings,/const forceControl = form.querySelector/);
+  assert.match(settings,/const controls = Object.fromEntries/);
   assert.match(deck,/compatibility.append\(forceMappingRow\)/);
   assert.match(deck,/\['\.download-row','#storage-note','#clear'\]/);
-  assert.match(css,/--playdeck-menu-border: 1px solid rgba\(255,255,255,\.50\)/);
+  assert.match(css,/--playdeck-menu-border: 0px solid transparent/);
   assert.match(css,/#toolbar-edge::after \{display:none!important\}/);
   assert.match(css,/scrollbar-gutter:auto!important/);
   assert.match(controller,/#panel #keybind-options > summary::after \{content:none!important/);
 });
 
-test('glass and transparent controls are unfilled, transparent mode remains unfilled, and anchored menus never scale',()=>{
+test('glass controls are unfilled and anchored menus never scale',()=>{
   const css=readFileSync(new URL('../website/player/deck.css',import.meta.url),'utf8');
   const chrome=readFileSync(new URL('../website/player-ui.css',import.meta.url),'utf8');
   const shadow=readFileSync(new URL('../website/player/controller.js',import.meta.url),'utf8');

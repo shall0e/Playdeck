@@ -31,8 +31,8 @@ test('full-resolution mode does not cap native pixel density or force WebGL qual
   assert.equal(context.__timebombPerformanceMode, 'full');
   assert.equal(initialRenderBudget('full', 2, 2), 0);
 });
-test('Display keeps ratio only, defaults to 16:9, and ignores legacy fit/zoom choices', () => {
-  assert.equal(displayConfig(true).ratio, '16:9');
+test('Display keeps ratio only, defaults to Screen, and ignores legacy fit/zoom choices', () => {
+  assert.equal(displayConfig(true).ratio, 'auto');
   assert.equal(displayConfig({ mode: 'fit' }).mode, 'stretch');
   assert.equal(displayConfig({ mode: 'zoom' }).mode, 'stretch');
   assert.ok(displayMarkup.includes('data-display-ratio'));

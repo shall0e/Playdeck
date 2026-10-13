@@ -4,11 +4,9 @@
 
 - **One change applies everywhere.** Whenever a user asks to change the style of one menu element, immediately apply the matching rule to ALL Playdeck menus and all instances of the same control type: toolbar, Game menu, Settings, Display, Controller (shadow DOM), keybind editor, Downloads, modal dialogs, and future menus. Never fix only the reported element.
 - `website/player/deck.css` owns the common CSS variables (menu size, surface, border, font, spacing, hover and picker). Mirror those exact tokens in the controller's shadow-DOM style and never introduce disconnected alternate themes.
-- The Glass / Transparent setting affects the **outer menu surface only**. Glass has a softly blurred gray outer panel; Transparent has an unfilled outer panel with ONE thin white border. No other panel, section, button, toolbar item, dropdown/select, input, keybind, checkbox, heading, or interactive row receives a visible background, outline, focus ring, border or hover box-shadow.
 - Controls have permanently transparent backgrounds in default, hover, focus, active, checked, disabled, and open states. Give hover/focus feedback with a slight text/icon color or text-glow transition (roughly 120 ms), NOT a filled rectangle or white line.
 - Dropdowns must match the dark UI. Use `appearance: base-select` and `::picker(select)` where supported; keep native semantic select behavior and readable fallbacks.
 - Use narrow (~258 px) menus, compact typography (~11-13 px), tight vertical rhythm, and condensed Controller keybind rows (~24 px). Do not sacrifice readability or pointer targets on small screens.
-- The only user-requested white stroke is the outer transparent menu border, at 50% white opacity. Do not add an outline to inputs or checkboxes, the toolbar edge activator, or section summaries. Suppress caret-like focus indicators on non-editable controls and hide scrollbars without reserving a layout gutter.
 - Settings content belongs in logical collapsible sections: panic shortcut and destination in Misc, game-specific force-controller mapping in Compatibility, cache counts, clearing and management under Downloads. Keep the underlying input references and event handlers intact when moving their DOM nodes.
 - Controller Advanced settings uses exactly the same summary typography, spacing, and no-marker / no-outline treatment as Misc, Compatibility, Downloads and Saves.
 - Clicking inside the game iframe must dismiss all player menus, including Controller and Settings, release toolbar focus and return input to the game.
@@ -24,7 +22,6 @@
 - Preserve reduced-motion preferences: skip animation AND JS waiting time when `prefers-reduced-motion: reduce` is active. Outside-click retraction must clear toolbar focus and avoid immediate re-reveal until the cursor leaves the bottom activation zone.
 
 - Reliability over decorative motion: never animate scale, transform or filter on `#game-menu-bar > *` (toolbar controls anchor floating panels). Use only vertical translate/opacity/soft blur on the outer panel; do not force `::details-content` heights or clip native `details` controls.
-- Both Glass and Transparent keep buttons, dropdowns, and text fields permanently unfilled using the shared transparent control tokens. Appearance changes only the outer panel; Controller shadow DOM mirrors those tokens, with the outer transparent panel maintaining its 50% white border.
 - Outside clicks (both inside/outside the game iframe) must finish the panel exit before the toolbar exit, release focus, and preserve button clickability. Test both the sequence and rapid switching/reopening of menus before shipping.
 
 - Open menus MUST be hit-testable above the game iframe. Keep the toolbar stacking context above the iframe (and its child panels pointer-enabled), without CSS filters or transforms on the toolbar wrapper that break popover hit testing. Validate this with normal Playwright clicks, never force-click workarounds.
@@ -33,6 +30,13 @@
 
 - The toolbar is a viewport-sized fixed flex container with `pointer-events:none` on the wrapper and `pointer-events:auto` on the menu controls/panels. This is essential: an absolutely positioned popover outside a 34 px-tall toolbar had a visual bounding box but Chrome sent clicks to the underlying iframe/page. Keep the transparent container full-screen and dock children to the bottom.
 
-- Apply a mode-specific `:root[data-playdeck-appearance='transparent']` override for buttons, summaries, dropdowns and fields across Game, Settings, Display and dialogs. This must outrank legacy `!important` controls, not merely set variables that a stronger rule could ignore. Glass uses the same unfilled controls; only its outer panel is filled.
 
 - Every deployed player HTML build must attach the current GitHub revision as a query string to both `/player-ui.css` and `/player/deck.css`. Do not reintroduce static style URLs: an HTML/JS deployment with cached old CSS breaks the menu appearance and interactivity.
+
+## Current UI contract
+- Glass is the only menu theme. Remove theme selectors and normalize legacy appearance preferences to glass.
+- Performance belongs in Compatibility. Hide page extras belongs in Misc. Order settings sections Compatibility, Downloads, Saves, Misc, About and sharing.
+- Every dropdown has a left-side disclosure indicator; details distinguish open and closed states. Mirror these rules in Controller shadow DOM.
+- Checkbox and radio rows place the control on the left and its text on the right.
+- All toolbar menu panels share the toolbar center. Use the shared menu-width token for Controller placement.
+- New display-options sessions default to Screen (internal ratio auto). Label 16:9 plainly and preserve its actual aspect ratio.
