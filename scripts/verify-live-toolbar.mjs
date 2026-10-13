@@ -92,6 +92,7 @@ try {
     await root.locator('#badge').click();
     const appearance = root.locator('#player-settings select[name="appearance"]');
     await appearance.selectOption('glass');
+    await root.waitForTimeout(180); // Allow the shared 130 ms color transition to finish.
     const button = root.locator('body > #panel button').first();
     const controllerToggle = root.locator('#toggle');
     console.log('Appearance button target',JSON.stringify(await button.evaluate(el => ({
@@ -102,6 +103,7 @@ try {
     const glassAlpha = Number(glass.slice(glass.lastIndexOf(',')+1).replace(')','').trim());
     assert(glassAlpha > 0, 'Glass buttons remain transparent: ' + glass);
     await appearance.selectOption('transparent');
+    await root.waitForTimeout(180);
     console.log('Appearance selection', JSON.stringify(await root.locator('html').evaluate(html => ({
       theme:html.dataset.playdeckAppearance,
       rootControlBg:getComputedStyle(html).getPropertyValue('--playdeck-control-bg'),
