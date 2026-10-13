@@ -1,11 +1,11 @@
+import {graphicsOptions,nextRenderScale,scaledPlayerViewport} from './graphics-quality.js';
 import {createSession,gameId} from './session.js';
 import {readProfile,profiles} from './profiles.js';
 import {installDeck,showRecentGames,showLinkBuilder} from './deck.js';
-import {adaptiveRenderBudget} from './performance.js';
 import { PERFORMANCE_OPTIONS, PERFORMANCE_MODES } from './options.js';
 import { readLaunchOptions } from './launch-options.js';
 import { playerViewport, fixedGameViewport } from './viewport.js';
-import { initialRenderBudget, reduceRenderBudget } from './performance.js';
+import { initialRenderBudget } from './performance.js';
 import { installController } from './controller.js';
 import { readSettings, readGameSettings, installSettings, matchesBind } from './settings.js';
 import { installToolbar } from './toolbar.js';
@@ -51,12 +51,15 @@ let displayOptionsConfig = null;
 try {
   displayOptionsConfig = displayConfig(launch.displayOptions);
 } catch {}
-let performanceMode = 'full';
+let performanceMode = 'auto';
 try {
   const saved = localStorage.getItem('playdeck.performance.v2');
   if (PERFORMANCE_MODES.includes(saved)) performanceMode = saved;
 } catch {}
 if (launch.performance) performanceMode = launch.performance;
+let frameCap = launch.frameCap ?? 0;
+let graphics=graphicsOptions(), dynamicScale=graphics.renderScale, rendererScaling=false;
+const launchGraphics=Object.fromEntries(['renderScale','adaptive','reducedFiltering','engineOptimizations'].filter(key=>launch[key]!==undefined).map(key=>[key,launch[key]]));
 const $ = (value) => document.querySelector(value);
 let gameURL,
   frame,
@@ -162,7 +165,7 @@ try {
 }
 
 let launchSession=null,deck=null;
-if(gameURL){const saved=profiles()[gameId(gameURL.href)]?.profile;if(saved && !launch.performance)performanceMode=readProfile(gameURL.href).performance;renderBudget=initialRenderBudget(performanceMode,navigator.deviceMemory,navigator.hardwareConcurrency);launchSession=createSession(gameURL.href,performanceMode,readProfile(gameURL.href).compatibility);}
+if(gameURL){const saved=profiles()[gameId(gameURL.href)]?.profile;if(saved && !launch.performance)performanceMode=readProfile(gameURL.href).performance;frameCap=launch.frameCap ?? readProfile(gameURL.href).frameCap;graphics=graphicsOptions({...readProfile(gameURL.href).graphics,...launchGraphics});dynamicScale=graphics.renderScale;renderBudget=initialRenderBudget(performanceMode,navigator.deviceMemory,navigator.hardwareConcurrency);launchSession=createSession(gameURL.href,performanceMode,readProfile(gameURL.href).compatibility,frameCap,graphics);}
 const launchCleanups=new Set();
 function tearDownLaunch(){clearInterval(enginePoll);clearInterval(activityPoll);clearTimeout(idleTimer);clearTimeout(slowTimer);for(const cleanup of launchCleanups){try{cleanup();}catch{}}launchCleanups.clear();cleanupDocuments.clear();cleanupHidden.clear();controllerMapper?.setPaused(true);controllerMapper?.detach();}
 const menuBar = document.createElement('div');
@@ -447,7 +450,7 @@ function applyDisplay() {
   }
   // Ratio is applied once to the game surface, never canceled by a second frame stretch.
   const renderRatio = null;
-  const layout = playerViewport(
+  const layout = scaledPlayerViewport(playerViewport(
     innerWidth,
     innerHeight,
     performanceMode,
@@ -456,7 +459,7 @@ function applyDisplay() {
     fixed,
     true,
     renderRatio,
-  );
+  ),rendererScaling ? 1 : dynamicScale,!!fixed);
   if (!layout) return;
   const { width, height, scaleX, scaleY, left, top } = layout;
   frame.style.position = 'absolute';
@@ -554,15 +557,63 @@ performanceControl.querySelector('select').onchange = (event) => {
   location.replace(nextURL.href);
 };
 $('#panel').append(performanceControl);
+const frameCapControl = document.createElement('label');
+frameCapControl.id = 'frame-cap-control';
+frameCapControl.style.cssText = performanceControl.style.cssText;
+frameCapControl.innerHTML = 'FPS limit<select aria-label="FPS limit"></select>';
+for (const limit of [15,30,45,60,75,90,105,120,0]) {
+  const option = document.createElement('option');
+  option.value = String(limit);
+  option.textContent = limit ? limit + ' FPS' : 'Uncapped';
+  frameCapControl.querySelector('select').append(option);
+}
+frameCapControl.querySelector('select').value = String(frameCap);
+frameCapControl.querySelector('select').onchange = event => {
+  frameCap = Number(event.target.value);
+  if (gameURL) deck?.save({...deck.profile(), frameCap});
+  const nextURL = new URL(location.href);
+  nextURL.searchParams.set('frameCap', String(frameCap));
+  location.replace(nextURL.href);
+};
+$('#panel').append(frameCapControl);
+const graphicsControls=document.createElement('div');graphicsControls.id='graphics-controls';
+function graphicsControl(title,key,choices) {
+  const label=document.createElement('label');label.append(document.createTextNode(title));
+  const control=document.createElement(choices?'select':'input');
+  control.setAttribute('aria-label',title);
+  if(choices){for(const [value,text] of choices){const option=document.createElement('option');option.value=String(value);option.textContent=text;control.append(option);}control.value=String(graphics[key]);}
+  else {control.type='checkbox';control.checked=graphics[key];}
+  control.onchange=()=>{graphics=graphicsOptions({...graphics,[key]:choices?Number(control.value):control.checked});if(gameURL)deck?.save({...deck.profile(),graphics});const url=new URL(location.href);for(const [name,value] of Object.entries(graphics))url.searchParams.set(name,String(value));location.replace(url.href);};
+  label.append(control);graphicsControls.append(label);
+}
+graphicsControl('Render scale','renderScale',[[.25,'25%'],[.5,'50%'],[.75,'75%'],[1,'100%']]);
+graphicsControl('Adaptive resolution (Automatic mode)','adaptive');
+graphicsControl('Reduced texture filtering','reducedFiltering');
+graphicsControl('Engine quality reductions','engineOptimizations');
+const graphicsStatus=document.createElement('p');graphicsStatus.className='deck-status';graphicsStatus.textContent='Engine: detecting';graphicsControls.append(graphicsStatus);
+$('#panel').append(graphicsControls);
 document.body.classList.toggle('performance-active', performanceMode !== 'native');
 // Unified chrome remains blurred; the small toolbar is hidden during normal gameplay.
 let performanceChannel = null,
-  lastBudgetChange = 0;
+  lastBudgetChange = 0,
+  healthySamples = 0;
 function connectPerformanceChannel(){performanceChannel?.close();
+healthySamples = 0;
+rendererScaling=false;dynamicScale=graphics.renderScale;
+lastBudgetChange = Date.now();
 try {
   performanceChannel = new BroadcastChannel(launchSession?'playdeck-performance:'+launchSession.id:'timebomb-performance:' + gameURL.origin);
   performanceChannel.onmessage = (event) => {
     const data = event.data;
+    if(data?.type==='graphics-status'){
+      const next=rendererScaling || !!data.rendererScaling;
+      const changed=rendererScaling!==next;
+      rendererScaling=next;
+      if(data.rendererScaling || !rendererScaling)graphicsStatus.textContent='Engine: '+String(data.engine || 'Unknown')+(data.rendererScaling?' · renderer scaling': ' · viewport scaling where supported');
+      if(changed)applyDisplay();
+      if(changed)performanceChannel.postMessage({type:'graphics-config',scale:dynamicScale});
+      return;
+    }
     if (['graphics-failure', 'allocation-failure'].includes(data?.type)) {
       if (frame?.isConnected)
         reportGameFailure(data.type === 'graphics-failure' ? 'graphics' : 'crash', data.detail);
@@ -578,13 +629,15 @@ try {
       Date.now() - lastBudgetChange < 10000
     )
       return;
-    const maximum=initialRenderBudget('auto',navigator.deviceMemory,navigator.hardwareConcurrency);
-    const reduced = adaptiveRenderBudget(renderBudget,data,maximum);
-    if (reduced !== renderBudget) {
-      renderBudget = reduced;
-      lastBudgetChange = Date.now();
-      applyDisplay();
+    if(graphics.adaptive){
+      const target=data.targetFPS || 60, refresh=data.refreshInterval || 1000/60;
+      const expected=Math.ceil((1000/target)/refresh-.02)*refresh;
+      healthySamples=data.count>=30 && data.p90<=expected*1.1?healthySamples+1:0;
+      const next=nextRenderScale(dynamicScale,data,graphics.renderScale,healthySamples);
+      if(next!==dynamicScale){dynamicScale=next;healthySamples=0;lastBudgetChange=Date.now();performanceChannel.postMessage({type:'graphics-config',scale:dynamicScale});applyDisplay();}
+      return;
     }
+
   };
   window.addEventListener('pagehide', () => performanceChannel?.close(), { once: true });
 } catch {}
@@ -1269,7 +1322,7 @@ if (gameURL) {
     '<a href="/docs/">URL API &amp; deployment guide</a> · <a href="/downloads/playdeck-source.zip" download>Download source</a> · <a href="/downloads/playdeck-deploy.zip" download>Deployable ZIP</a>';
   $('#loading').append(links);
 }
-deck=installDeck({gameURL:gameURL?.href,name,image:params.get('image'),getFrame:()=>frame,getSession:()=>launchSession,getMode:()=>performanceMode,launchOptions:{nativeGamepad,displayOptions:displayOptionsConfig},toolbar,send,reload:({online=false}={})=>{if(!gameURL)return;launchSession=createSession(gameURL.href,performanceMode,readProfile(gameURL.href).compatibility);connectPerformanceChannel();send('sandbox:config',{online}).catch(()=>{}).finally(()=>mount(gamePath(LOCAL)));},setState:data=>{controllerMapper?.setPaused(data.paused);frame?.contentWindow.postMessage({type:'playdeck:state',...data},location.origin);}});
+deck=installDeck({gameURL:gameURL?.href,name,image:params.get('image'),getFrame:()=>frame,getSession:()=>launchSession,getMode:()=>performanceMode,getFrameCap:()=>frameCap,getGraphics:()=>graphics,launchOptions:{nativeGamepad,displayOptions:displayOptionsConfig},toolbar,send,reload:({online=false}={})=>{if(!gameURL)return;launchSession=createSession(gameURL.href,performanceMode,readProfile(gameURL.href).compatibility,frameCap,graphics);connectPerformanceChannel();send('sandbox:config',{online}).catch(()=>{}).finally(()=>mount(gamePath(LOCAL)));},setState:data=>{controllerMapper?.setPaused(data.paused);frame?.contentWindow.postMessage({type:'playdeck:state',...data},location.origin);}});
 if(!gameURL && !params.get('url')){const recent=document.createElement('button');recent.type='button';recent.textContent='Recent games';recent.onclick=()=>showRecentGames();const link=document.createElement('button');link.type='button';link.textContent='Build launch link';link.onclick=()=>showLinkBuilder();$('#loading').append(recent,link);}
 window.addEventListener('pagehide',tearDownLaunch,{once:true});
 announceSettings();

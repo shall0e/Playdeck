@@ -217,6 +217,10 @@ export function controllerRuntime({ getFrame, readConfig, isPaused } = {}) {
     try {
       if (readConfig) config = readConfig();
       if (isPaused) paused = isPaused();
+      if (!config?.enabled || paused || document.hidden) {
+        release();
+        return;
+      }
       const pads = nativePads?.() || [];
       const available = (pad) => pad && pad.connected !== false && !disconnectedPads.has(pad.index);
       const pad =
@@ -754,6 +758,7 @@ export function installController({ profileId, getFrame, forceMapping = false })
     $('#panel').classList.remove('playdeck-closing');
     $('#panel').hidden = !value;
     $('#toggle').setAttribute('aria-expanded', String(value));
+    if (value) refresh();
     if (!value) {
       save();
     }
@@ -959,7 +964,7 @@ export function installController({ profileId, getFrame, forceMapping = false })
   sync();
   refresh();
   const interval = setInterval(() => {
-    if (!document.hidden) refresh();
+    if (!document.hidden && open) refresh();
   }, 500);
   window.addEventListener('gamepaddisconnected', refresh);
   window.addEventListener('gamepadconnected', refresh);

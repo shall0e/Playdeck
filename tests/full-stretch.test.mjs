@@ -40,7 +40,7 @@ test('Display keeps ratio only, defaults to 16:9, and ignores legacy fit/zoom ch
   for (const word of ['Fit', 'Stretch', 'Zoom', 'Scaling'])
     assert.ok(!displayMarkup.includes(word));
   const boot = readFileSync(new URL('../website/player/boot.js', import.meta.url), 'utf8');
-  assert.match(boot, /let performanceMode\s*=\s*'full'/);
+  assert.match(boot, /let performanceMode\s*=\s*'auto'/);
   assert.ok(!boot.includes('data-display-mode'));
   assert.ok(!boot.includes('Game enhancement'));
 });

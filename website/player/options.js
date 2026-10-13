@@ -1,7 +1,7 @@
 // Shared launch validation and settings choices for every game.
 export const PERFORMANCE_OPTIONS = Object.freeze({
-  full: 'Full resolution (default)',
-  auto: 'Automatic performance',
+  full: 'Full resolution',
+  auto: 'Automatic performance (default)',
   fast: 'Maximum speed (softer image)',
   native: 'Native rendering',
 });

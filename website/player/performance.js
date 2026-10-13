@@ -5,26 +5,80 @@ export function initialRenderBudget(mode, memory, cores) {
   return (memory > 0 && memory <= 4) || (cores > 0 && cores <= 4) ? 800 : 1280;
 }
 export function reduceRenderBudget(budget, sample) {
-  if (!sample || sample.count < 30 || sample.slowRatio < 0.15 || sample.p90 < 35) return budget;
+  const slowLimit = Math.max(28, sample?.targetFPS > 0 ? 1600 / sample.targetFPS : 0);
+  if (!sample || sample.count < 30 || sample.slowRatio < 0.15 || sample.p90 < slowLimit) return budget;
   return Math.max(640, Math.round((budget * 0.8) / 16) * 16);
 }
 
-export function adaptiveRenderBudget(budget,sample,maximum=1280) {
+export function adaptiveRenderBudget(budget,sample,maximum=1280,allowRecovery=true) {
   const reduced=reduceRenderBudget(budget,sample);
   if(reduced!==budget)return reduced;
-  if(sample?.count>=90 && sample.slowRatio<.03 && sample.p90<20)return Math.min(maximum,Math.max(budget,Math.round(budget*1.1/16)*16));
+  if(allowRecovery && sample?.count>=90 && sample.slowRatio<.03 && sample.p90<Math.max(20,sample.targetFPS>0?1600/sample.targetFPS:0))return Math.min(maximum,Math.max(budget,Math.round(budget*1.1/16)*16));
   return budget;
 }
 
+// Serialized into game page and worker realms. Opt-in: some games update
+// physics once per callback, so a lower cap can also slow their simulation.
+export function installFrameCap(fps = 0) {
+  if (![15, 30, 45, 60, 75, 90, 105, 120].includes(Number(fps)) || globalThis.__playdeckFrameCapInstalled ||
+      typeof globalThis.requestAnimationFrame !== 'function' ||
+      typeof globalThis.cancelAnimationFrame !== 'function') return;
+  globalThis.__playdeckFrameCapInstalled = true;
+  const request = globalThis.requestAnimationFrame.bind(globalThis);
+  const cancel = globalThis.cancelAnimationFrame.bind(globalThis);
+  const interval = 1000 / Number(fps);
+  const callbacks = new Map();
+  let handle = 0, scheduled = null, deadline = -Infinity, previousNative = null, refreshInterval = 0;
+  function schedule() {
+    if (scheduled === null && callbacks.size) scheduled = request(tick);
+  }
+  function tick(now) {
+    if(previousNative!==null && now>previousNative && now-previousNative<100){refreshInterval=refreshInterval?Math.min(refreshInterval,now-previousNative):now-previousNative;globalThis.__playdeckRefreshInterval=refreshInterval;}
+    previousNative=now;
+    scheduled = null;
+    if (now >= deadline - 0.5) {
+      deadline = Number.isFinite(deadline) && now - deadline < interval ? deadline + interval : now + interval;
+      // Cancellation during a frame must still cancel later callbacks in it.
+      // Requests made by callbacks belong to the next frame, not this batch.
+      for (const id of [...callbacks.keys()]) {
+        const callback = callbacks.get(id);
+        if (!callback) continue;
+        callbacks.delete(id);
+        try { callback.call(globalThis, now); }
+        catch (error) {
+          if (typeof globalThis.reportError === 'function') globalThis.reportError(error);
+          else queueMicrotask(() => { throw error; });
+        }
+      }
+    }
+    schedule();
+  }
+  globalThis.requestAnimationFrame = callback => {
+    if (typeof callback !== 'function') throw new TypeError('Animation frame callback must be a function');
+    const id = ++handle;
+    callbacks.set(id, callback);
+    schedule();
+    return id;
+  };
+  globalThis.cancelAnimationFrame = id => {
+    callbacks.delete(id);
+    if (!callbacks.size && scheduled !== null) {
+      cancel(scheduled);
+      scheduled = null;
+    }
+  };
+}
+
 // Serialized into both page and worker realms by the proxy.
-export function installPerformance(mode = 'auto', channelName = '') {
+export function installPerformance(mode = 'auto', channelName = '', frameCap = 0) {
   if (globalThis.__timebombPerformanceInstalled) return;
   globalThis.__timebombPerformanceInstalled = true;
   globalThis.__timebombPerformanceMode = mode;
   const reduceQuality=mode==='auto' || mode==='fast';
   const canvasTypes = ['HTMLCanvasElement', 'OffscreenCanvas'];
+  const seenCanvases = new WeakSet();
   const canvases = new Set();
-  const telemetry = { renderer: '', fps: 0, p90: 0, slowRatio: 0, count: 0 };
+  const telemetry = { renderer: '', fps: 0, p90: 0, slowRatio: 0, count: 0, targetFPS: Number(frameCap) || 0 };
   let channel = null;
   try {
     if (channelName && typeof BroadcastChannel === 'function')
@@ -85,12 +139,16 @@ export function installPerformance(mode = 'auto', channelName = '') {
         : options;
       const context = native.call(this, type, attributes, ...rest);
       if (context && (webgl || type === 'webgpu' || type==='2d')) {
-        if (!canvases.has(this) && webgl && channel)
+        if (!seenCanvases.has(this) && webgl && channel)
           this.addEventListener?.('webglcontextlost', () => {
             if (this.width * this.height >= 65536)
               report({ type: 'graphics-failure', detail: 'WebGL graphics context lost' });
           });
-        canvases.add(this);
+        if (!seenCanvases.has(this)) {
+          seenCanvases.add(this);
+          // Do not retain discarded engine canvases/texture surfaces for the whole session.
+          if (mode === 'auto' && typeof WeakRef === 'function') canvases.add(new WeakRef(this));
+        }
         telemetry.renderer = type;
       }
       return context;
@@ -123,35 +181,49 @@ export function installPerformance(mode = 'auto', channelName = '') {
   }
   // Measure the engine's own frame callbacks; never change scheduling or input.
   // This is frame cadence, not a claim that each callback drew a frame.
-  if (channel && typeof requestAnimationFrame === 'function') {
+  if (mode === 'auto' && channel && typeof requestAnimationFrame === 'function') {
     const native = requestAnimationFrame.bind(globalThis);
     let last = 0,
-      sent = 0;
+      sent = 0,
+      inspected = -Infinity,
+      rendering = false;
     const gaps = [];
     globalThis.requestAnimationFrame = (callback) =>
       native(function (now) {
         const visible = typeof document === 'undefined' || !document.hidden;
         if (visible && now !== last) {
-          let rendering = false;
-          for (const canvas of canvases)
-            if (canvas.width * canvas.height >= 65536) {
-              rendering = true;
-              break;
+          // Inspect surfaces once per sample window, not on every engine frame.
+          if (now - inspected >= 3000) {
+            rendering = false;
+            for (const reference of canvases) {
+              const canvas = reference.deref();
+              if (!canvas) canvases.delete(reference);
+              else if (canvas.width * canvas.height >= 4096) rendering = true;
             }
+            inspected = now;
+          }
           if (last && now - last < 500 && rendering) gaps.push(now - last);
+          else gaps.length = 0;
           last = now;
           if (now - sent > 3000 && gaps.length >= 30) {
             const sorted = gaps.slice().sort((a, b) => a - b),
               sum = gaps.reduce((a, b) => a + b, 0);
             telemetry.fps = Math.round((1000 * gaps.length) / sum);
             telemetry.p90 = sorted[Math.floor(sorted.length * 0.9)];
-            telemetry.slowRatio = gaps.filter((gap) => gap > 35).length / gaps.length;
+            telemetry.refreshInterval=globalThis.__playdeckRefreshInterval || 1000/60;
+            const targetPeriod=1000/(telemetry.targetFPS || 60);
+            const expected=Math.ceil(targetPeriod/telemetry.refreshInterval-.02)*telemetry.refreshInterval;
+            const slowLimit = Math.max(25,expected*1.25);
+            telemetry.slowRatio = gaps.filter((gap) => gap > slowLimit).length / gaps.length;
             telemetry.count = gaps.length;
             report({ type: 'cadence', ...telemetry });
             gaps.length = 0;
             sent = now;
           }
           if (gaps.length > 240) gaps.shift();
+        } else if (!visible) {
+          last = 0;
+          gaps.length = 0;
         }
         return callback.call(this, now);
       });

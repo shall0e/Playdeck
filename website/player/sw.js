@@ -6,7 +6,7 @@ const PREFIX='/player/games/';
 const CACHE='timebomb-local-games-v1';
 const SHELL='playdeck-local-shell-v37';
 const METADATA='playdeck-local-hashes-v1';
-const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/settings.js','/player/toolbar.js','/player/toolbar-icons.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
+const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/graphics-quality.js','/player/settings.js','/player/toolbar.js','/player/toolbar-icons.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
 SHELL_FILES.push('/player/version.js','/player/feature-tools.js','/player/cookies.js','/player/session.js','/player/options.js','/player/game-runtime.js','/player/proxy-core.js','/player/rewrite.js','/player/vendor/acorn.js','/player/cache-policy.js','/player/download-store.js','/player/deck.js','/player/deck.css','/player/profiles.js','/player/saves.js','/player/touch.js','/player/capture.js','/player/packages.js','/player/manifest.webmanifest','/player/icon.svg','/player/build.json');
 SHELL_FILES.push('/player/network.js','/player/network-url.js');
 const OLD_PREFIX='/__sandbox/games/';

@@ -1,4 +1,5 @@
 import { iconMarkup as toolbarIcon } from '../website/player/toolbar-icons.js';
+import {scaledPlayerViewport} from '../website/player/graphics-quality.js';
 import { playerViewport, fixedGameViewport } from '../website/player/viewport.js';
 import { initialRenderBudget, reduceRenderBudget } from '../website/player/performance.js';
 import test from 'node:test';
@@ -145,7 +146,7 @@ test('games without display options show the normal desktop page without canvas 
     innerHeight: 844,
     restoreExpandedCanvas: () => restored++,
   });
-  Object.assign(context, { playerViewport, fixedGameViewport, fixedViewportDocs: new WeakMap() });
+  Object.assign(context, { scaledPlayerViewport,rendererScaling:false,dynamicScale:1,playerViewport, fixedGameViewport, fixedViewportDocs: new WeakMap() });
   vm.runInContext(apply, context);
   context.applyDisplay();
   assert.equal(restored, 1);
@@ -257,7 +258,7 @@ test('automatic viewport bounds both dimensions while preserving aspect and orig
       innerHeight: screenHeight,
       restoreExpandedCanvas() {},
     });
-    Object.assign(context, { playerViewport, fixedGameViewport, fixedViewportDocs: new WeakMap() });
+    Object.assign(context, { scaledPlayerViewport,rendererScaling:false,dynamicScale:1,playerViewport, fixedGameViewport, fixedViewportDocs: new WeakMap() });
     vm.runInContext(apply, context);
     context.applyDisplay();
     const width = parseFloat(frame.style.width),

@@ -26,6 +26,8 @@ export function buildLaunchLink(values,origin) {
   const url=new URL('/player/',origin);url.searchParams.set('url',game.href);
   for(const key of ['name','image'])if(values[key]){if(key==='image' && new URL(values[key]).protocol!=='https:')throw new Error('Cover images must use HTTPS');url.searchParams.set(key,values[key]);}
   for(const key of ['performance','ratio','toolbar'])if(values[key])url.searchParams.set(key,values[key]);
+  if(values.graphics)for(const [key,value] of Object.entries(values.graphics))if(['renderScale','adaptive','reducedFiltering','engineOptimizations'].includes(key))url.searchParams.set(key,String(value));
+  if(values.frameCap!==undefined){if(![0,15,30,45,60,75,90,105,120].includes(Number(values.frameCap)))throw new Error('Invalid frame cap');url.searchParams.set('frameCap',String(values.frameCap));}
   if(values.displayOptions!==undefined)url.searchParams.set('displayOptions',String(values.displayOptions));
   for(const key of ['nativeGamepad','forceController','hidePageExtras'])if(values[key]!==undefined)url.searchParams.set(key,String(values[key]));
   if(values.parentOrigin){const parent=new URL(values.parentOrigin);if(parent.href!==parent.origin+'/' || parent.username || parent.password || !['https:','http:'].includes(parent.protocol))throw new Error('Enter a parent origin without a path');url.searchParams.set('parentOrigin',parent.origin);}
