@@ -29,6 +29,20 @@ export function installToolbar(bar, settingsPanel, { getFrame, alwaysVisible = f
     clearTimeout(timer);
     timer = setTimeout(hide, 650);
   }
+  // Iframe input events do not bubble up to the launcher document.
+  // Close every player overlay when the user returns to the game.
+  function dismiss() {
+    settingsPanel.hidden = true;
+    bar.querySelector('#badge')?.setAttribute('aria-expanded', 'false');
+    bar.querySelectorAll('details').forEach((node) => (node.open = false));
+    document.dispatchEvent(new Event('playdeck:game-interaction'));
+    const active = document.activeElement;
+    active?.shadowRoot?.activeElement?.blur?.();
+    if (bar.contains?.(active)) active?.blur?.();
+    pointerOver = false;
+    clearTimeout(timer);
+    hide();
+  }
   function track(event, doc = document) {
     if (event.pointerType === 'touch') return;
     if (doc.pointerLockElement) return;
@@ -63,14 +77,12 @@ export function installToolbar(bar, settingsPanel, { getFrame, alwaysVisible = f
     'pointerdown',
     (event) => {
       if (
-        event.composedPath().includes(bar) ||
-        event.composedPath().includes(settingsPanel) ||
+        (event.composedPath?.() || []).includes(bar) ||
+        (event.composedPath?.() || []).includes(settingsPanel) ||
         event.target === edge
       )
         return;
-      bar.querySelectorAll('details').forEach((node) => (node.open = false));
-      bar.querySelector('#badge')?.blur();
-      schedule();
+      dismiss();
     },
     true,
   );
@@ -79,7 +91,7 @@ export function installToolbar(bar, settingsPanel, { getFrame, alwaysVisible = f
     if (!doc || watched.has(doc)) return;
     watched.add(doc);
     doc.addEventListener('pointermove', (event) => track(event, doc), { passive: true });
-    doc.addEventListener('pointerdown', schedule, { passive: true });
+    doc.addEventListener('pointerdown', dismiss, { passive: true, capture: true });
     doc.addEventListener(
       'pointerlockchange',
       () => {
@@ -95,5 +107,5 @@ export function installToolbar(bar, settingsPanel, { getFrame, alwaysVisible = f
   }
   bar.inert = true;
   if (alwaysVisible) show();
-  return { show, attach };
+  return { show, attach, dismiss };
 }
