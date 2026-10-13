@@ -7,6 +7,31 @@ import {recoverGameRequest,proxyOutgoingGameRequest} from '../website/player/ses
 import {staticResponse,routeCachedResponse} from '../website/player/cache-policy.js';
 const origin='https://player.example',prefix='/player/games/.launch/12345678-abcd/full/101/gameid/',base='https://game.example/folder/index.html';
 
+test('file workers retain network hooks when service worker fetches lose destination', async () => {
+  class Worker { constructor(url, options) { this.url=url; this.options=options; } }
+  const realm=vm.createContext({URL,Request,Worker,SharedWorker:Worker,fetch:async()=>new Response('ok')});
+  vm.runInContext(bootstrap(base,origin,true,prefix),realm);
+  const previous=globalThis.fetch;
+  try {
+    for (const [name,destination] of [['Worker','worker'],['SharedWorker','sharedworker']]) {
+      const instance=new realm[name]('dl_worker.js?map=transit',{type:'module'});
+      assert.equal(instance.options.type,'module');
+      assert.equal(new URL(instance.url).searchParams.get('__playdeck_worker'),destination);
+      globalThis.fetch=async url=>{
+        assert.equal(url,'https://game.example/folder/dl_worker.js?map=transit');
+        return new Response("fetch('/packs/zm_transit/dist/manifest.json');fetch('/packs/zm_transit/dist/chunk.br');",{headers:{'Content-Type':'text/javascript','Last-Modified':'test'}});
+      };
+      const response=await worker.fetch(new Request(instance.url,{headers:{'sec-fetch-dest':'empty','X-Playdeck-Destination':'empty'}}),{});
+      assert.equal(response.headers.get('X-Playdeck-Preserve-Source'),null);
+      assert.ok(response.headers.get('X-Playdeck-Transform').endsWith(':'+destination));
+      const calls=[];
+      const child=vm.createContext({URL,Request,fetch:url=>{calls.push(url);return Promise.resolve(new Response('ok'));}});
+      vm.runInContext(await response.text(),child);
+      assert.deepEqual(calls,[origin+prefix+'game.example/packs/zm_transit/dist/manifest.json',origin+prefix+'game.example/packs/zm_transit/dist/chunk.br']);
+    }
+  } finally { globalThis.fetch=previous; }
+});
+
 test('public HTTP, ports and sockets round-trip through the sandbox without losing queries',()=>{
   for(const source of ['https://cdn.example/file.bin?q=1#two','http://cdn.example/file.bin?q=1','https://cdn.example:8443/file','ws://cdn.example:8080/live','wss://cdn.example/live']) {
     const url=new URL(proxyURL(source,base,origin,prefix));
@@ -92,7 +117,7 @@ test('navigation destinations are mapped without rewriting game data or shadowed
 test('existing cached documents get new network hooks locally without changing saved game bytes',async()=>{
   const request=new Request(origin+prefix+'game.example/index.html');
   const response=await routeCachedResponse(new Response('<html><head></head><body>saved</body></html>',{headers:{'Content-Type':'text/html','X-Playdeck-Compatibility':'deck-runtime-1'}}),request);
-  const text=await response.text();assert(text.includes('installNetworkProxy'));assert.equal(response.headers.get('X-Playdeck-Network'),'deck-network-2');
+  const text=await response.text();assert(text.includes('installNetworkProxy'));assert.equal(response.headers.get('X-Playdeck-Network'),'deck-network-3');
   const binary=new Response(new Uint8Array([1,2,3]));assert.equal(await routeCachedResponse(binary,request),binary);
 });
 import {rewriteImportMap} from '../website/player/rewrite.js';

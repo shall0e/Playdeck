@@ -96,7 +96,16 @@ export function installNetworkProxy(base, origin, prefix, workerPrelude, resolve
       }
       if (blob && (!blob.type || /javascript|ecmascript/i.test(blob.type))) {
         args[0] = URL.createObjectURL(new Blob([networkPrelude,'\n',blob],{type:'text/javascript'}));
-      } else args[0] = map(args[0]);
+      } else {
+        args[0] = map(args[0]);
+        // Service worker fetches can lose the browser's worker destination.
+        // Carry it in the URL so file workers always receive network hooks.
+        const script = new URL(String(args[0]), origin);
+        if (script.origin === origin && script.pathname.startsWith(prefix)) {
+          script.searchParams.set('__playdeck_worker', name === 'SharedWorker' ? 'sharedworker' : 'worker');
+          args[0] = script.href;
+        }
+      }
       return Reflect.construct(target, args, newTarget);
     }});
   }

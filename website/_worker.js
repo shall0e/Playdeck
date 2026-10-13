@@ -74,7 +74,9 @@ export default {
       if (!['GET','HEAD','POST','PUT','PATCH','DELETE'].includes(request.method)) return new Response('Unsupported game request method.', {status:405});
       const read = ['GET','HEAD'].includes(request.method);
       const selected=launchContext.mode || (request.headers.get('cookie') || '').match(/(?:^|;\s*)tb_performance=(full|auto|fast|native)(?:;|$)/)?.[1] || 'full';
-      const destination=request.headers.get('X-Playdeck-Destination') || request.headers.get('sec-fetch-dest') || '';
+      const workerDestination=target.searchParams.get('__playdeck_worker');
+      target.searchParams.delete('__playdeck_worker');
+      const destination=['worker','sharedworker'].includes(workerDestination) ? workerDestination : request.headers.get('X-Playdeck-Destination') || request.headers.get('sec-fetch-dest') || '';
       const integrity=target.searchParams.has('__playdeck_integrity') || !!request.integrity || request.headers.has('X-Playdeck-Integrity');
       target.searchParams.delete('__playdeck_integrity');
       target.searchParams.delete('__playdeck_original');target.searchParams.delete('__playdeck_range');

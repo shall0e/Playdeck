@@ -12,7 +12,7 @@ import {installCookieNamespace,restoreCookie} from './cookies.js';
 const LEGACY_PREFIX = '/__game/';
 const PREFIX = LEGACY_PREFIX + 'v4/';
 const LOCAL_PREFIX = '/player/games/';
-const ASSET_VERSION='deck-network-2';
+const ASSET_VERSION='deck-network-3';
 // Wrangler adds __name calls inside serialized functions when keeping names.
 // Supply the helper in the injected realm, isolated from the game's own bindings.
 const INJECTED_NAMES='const __name=(fn,name)=>{try{Object.defineProperty(fn,"name",{value:name,configurable:true});}catch{}return fn;};';
