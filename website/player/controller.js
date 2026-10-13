@@ -656,13 +656,14 @@ export function installController({ profileId, getFrame, forceMapping = false })
     }
     #panel:not([hidden]) {animation:playdeck-panel-enter 180ms ease-out both}
     #panel.playdeck-closing {animation:playdeck-panel-exit 210ms ease-in both;pointer-events:none}
+    /* Keep hit targets stationary as the panel fades/softens. */
     @keyframes playdeck-panel-enter {
-      from{opacity:0;filter:blur(5px);translate:0 7px}
-      to{opacity:1;filter:blur(0);translate:0 0}
+      from{opacity:0;filter:blur(5px)}
+      to{opacity:1;filter:blur(0)}
     }
     @keyframes playdeck-panel-exit {
-      from{opacity:1;filter:blur(0);translate:0 0}
-      to{opacity:0;filter:blur(5px);translate:0 7px}
+      from{opacity:1;filter:blur(0)}
+      to{opacity:0;filter:blur(5px)}
     }
     #panel details[open] > :not(summary) {
       animation:playdeck-section-appear 170ms ease-out both
