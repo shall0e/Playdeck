@@ -751,3 +751,20 @@ body.playdeck-controller-menu-open > iframe {
    Only its button/panel children receive clicks; empty areas dismiss menus. */
 #game-menu-bar.is-visible {pointer-events:none!important}
 #game-menu-bar.is-visible > * {pointer-events:auto!important}
+
+/* Expand the spacing, not the full-screen hit-testing layer or popup anchors. */
+#game-menu-bar:not(.is-visible) {gap:0!important;filter:none!important;
+  transition:visibility 0s linear 220ms,opacity 220ms ease,translate 220ms ease,gap 220ms ease!important}
+#game-menu-bar.is-visible {gap:4px!important;
+  transition:visibility 0s,opacity 220ms ease,translate 220ms ease,gap 220ms ease!important}
+#game-menu-bar.is-visible .playdeck-icon-control > svg {
+  animation:playdeck-toolbar-icon-enter 240ms ease-out both;
+}
+@keyframes playdeck-toolbar-icon-enter {
+  from {filter:blur(4px);scale:.82}
+  to {filter:blur(0);scale:1}
+}
+@media(prefers-reduced-motion:reduce) {
+  #game-menu-bar,#game-menu-bar.is-visible,#game-menu-bar:not(.is-visible) {transition:none!important}
+  #game-menu-bar svg {animation:none!important;filter:none!important;scale:1!important}
+}

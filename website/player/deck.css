@@ -161,9 +161,10 @@ body input:is([type=checkbox],[type=radio]):focus-visible {
 
 /* Use the Chromium customizable picker, not the bright native OS popup. */
 @supports (appearance: base-select) {
-  body select, body select::picker(select) {appearance:base-select}
+  body select, body select::picker(select) {appearance:base-select!important}
+  body select:not([hidden]):not([multiple]) {display:inline-flex!important;align-items:center;justify-content:space-between}
   body select::picker(select) {
-    background:var(--playdeck-menu-surface)!important;
+    background:#202020!important;
     border:var(--playdeck-menu-border)!important;
     outline:0!important;
     border-radius:9px!important;
@@ -181,9 +182,14 @@ body input:is([type=checkbox],[type=radio]):focus-visible {
     background:transparent!important;color:#fff!important;
     text-shadow:0 0 7px #ffffff42
   }
-  body select::picker-icon {color:var(--playdeck-muted)}
+  body select::picker-icon {content:'⌄';font-size:14px;color:var(--playdeck-muted);margin-inline-start:8px;transition:rotate 160ms ease}
+  body select:open::picker-icon {rotate:180deg}
   body select option::checkmark {color:var(--playdeck-text)}
 }
+body select {color-scheme:dark}
+body select option {background:#202020!important;color:#e1e1e1!important}
+body select option:disabled {color:#929292!important}
+@supports not (appearance:base-select) {body select {appearance:auto!important}}
 @media(prefers-reduced-motion:reduce) {
   body button,body select,body input,#game-menu-bar summary,#panel summary {transition:none!important}
 }
@@ -305,12 +311,12 @@ body > #panel.playdeck-closing {
 }
 /* Animated surfaces never move their click targets. */
 @keyframes playdeck-panel-enter {
-  from {opacity:0;filter:blur(5px)}
-  to {opacity:1;filter:blur(0)}
+  from {opacity:0;filter:blur(5px);translate:0 6px}
+  to {opacity:1;filter:blur(0);translate:0 0}
 }
 @keyframes playdeck-panel-exit {
-  from {opacity:1;filter:blur(0)}
-  to {opacity:0;filter:blur(5px)}
+  from {opacity:1;filter:blur(0);translate:0 0}
+  to {opacity:0;filter:blur(5px);translate:0 6px}
 }
 /* Section content uses the browser's native open behavior so no form controls
    are clipped or accidentally unclickable by details-content overrides. */

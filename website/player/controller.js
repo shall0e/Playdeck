@@ -599,9 +599,10 @@ export function installController({ profileId, getFrame, forceMapping = false })
       outline:0!important;box-shadow:none!important}
     #panel select option{background:#202020;color:#e1e1e1}
     @supports (appearance: base-select) {
-      #panel select,#panel select::picker(select){appearance:base-select}
+      #panel select,#panel select::picker(select){appearance:base-select!important}
+      #panel select:not([hidden]):not([multiple]){display:inline-flex!important;align-items:center;justify-content:space-between}
       #panel select::picker(select) {
-        background:var(--playdeck-menu-surface,rgba(29,29,29,.78))!important;
+        background:#202020!important;
         border:var(--playdeck-menu-border,0px solid transparent)!important;
         border-radius:9px!important;padding:4px!important;
         color:var(--playdeck-text,#e1e1e1)!important;
@@ -610,7 +611,12 @@ export function installController({ profileId, getFrame, forceMapping = false })
       #panel option{background:transparent!important;color:var(--playdeck-text,#e1e1e1)!important;
         border:0!important;padding:5px!important}
       #panel option:is(:hover,:focus,:checked){background:transparent!important;color:#fff!important}
+      #panel select::picker-icon{content:'⌄';font-size:14px;color:var(--playdeck-muted,#aaa);margin-inline-start:8px;transition:rotate 160ms ease}
+      #panel select:open::picker-icon{rotate:180deg}
     }
+    #panel select{color-scheme:dark}
+    #panel option:disabled{color:#929292!important}
+    @supports not (appearance:base-select){#panel select{appearance:auto!important}}
     /* Shared Settings section style: compact, plain heading, no +/- marker. */
     #panel #keybind-options {
       margin:4px 0!important;padding:2px 0!important;
@@ -658,12 +664,12 @@ export function installController({ profileId, getFrame, forceMapping = false })
     #panel.playdeck-closing {animation:playdeck-panel-exit 210ms ease-in both;pointer-events:none}
     /* Keep hit targets stationary as the panel fades/softens. */
     @keyframes playdeck-panel-enter {
-      from{opacity:0;filter:blur(5px)}
-      to{opacity:1;filter:blur(0)}
+      from{opacity:0;filter:blur(5px);translate:0 6px}
+      to{opacity:1;filter:blur(0);translate:0 0}
     }
     @keyframes playdeck-panel-exit {
-      from{opacity:1;filter:blur(0)}
-      to{opacity:0;filter:blur(5px)}
+      from{opacity:1;filter:blur(0);translate:0 0}
+      to{opacity:0;filter:blur(5px);translate:0 6px}
     }
     #panel details[open] > :not(summary) {
       animation:playdeck-section-appear 170ms ease-out both
