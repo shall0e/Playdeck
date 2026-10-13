@@ -70,6 +70,7 @@ try {
     await root.locator('body > #panel .deck-section > summary').filter({hasText:'Compatibility'}).click();
     await root.locator('#performance-control select').waitFor({ state: 'visible' });
     assert.equal(await root.locator('#performance-control select option').count(), 4);
+    await root.locator('body > #panel .deck-section > summary').filter({hasText:'Compatibility'}).click();
     await root.locator('#badge').click();
     // Exercise real pointer input, not only icon selectors. This catches the
     // toolbar transforms/inert state that previously blocked menu actions.
