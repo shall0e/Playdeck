@@ -703,6 +703,22 @@ export function installController({ profileId, getFrame, forceMapping = false })
         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='m3 4 3 4 3-4' fill='none' stroke='%23aaa' stroke-width='1.5'/%3E%3C/svg%3E")!important;
         background-position:3px center!important;background-size:12px!important;background-repeat:no-repeat!important}
     }
+
+    #toggle::before,#panel summary::before {content:''!important;width:12px;height:12px;flex:0 0 12px;
+      display:inline-block;background:currentColor;mask:var(--playdeck-chevron,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m9 18 6-6-6-6' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")) center/contain no-repeat;
+      -webkit-mask:var(--playdeck-chevron,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m9 18 6-6-6-6' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")) center/contain no-repeat;
+      margin-right:6px;rotate:0deg;transition:rotate 120ms ease;color:var(--playdeck-muted,#aaa)}
+    #toggle[aria-expanded=true]::before,#panel details[open] > summary::before {rotate:90deg}
+    #panel details[open] > summary {color:var(--playdeck-hover-text,#fff)!important;font-weight:600!important}
+    #panel label:has(> input[type=checkbox]) {align-items:flex-start!important;line-height:1.5!important}
+    #panel label > input[type=checkbox] {width:14px;height:14px;margin-top:1px!important}
+    @supports(appearance:base-select) {
+      #panel select::picker-icon {content:''!important;width:12px;height:12px;flex:0 0 12px;
+        background:currentColor;mask:var(--playdeck-chevron,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m9 18 6-6-6-6' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")) center/contain no-repeat;
+        -webkit-mask:var(--playdeck-chevron,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m9 18 6-6-6-6' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")) center/contain no-repeat;rotate:90deg}
+      #panel select:open::picker-icon {rotate:270deg}
+    }
+    @media(prefers-reduced-motion:reduce) {#toggle::before,#panel summary::before,#panel select::picker-icon {transition:none!important}}
 </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
   <section id="panel" hidden aria-label="Controller settings"><header><h2>Controller mapping</h2></header>
   <p id="status" role="status">Connect a controller and press a button.</p>
