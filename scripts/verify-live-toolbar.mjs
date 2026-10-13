@@ -97,6 +97,8 @@ try {
     await appearance.selectOption('transparent');
     console.log('Appearance selection', JSON.stringify(await root.locator('html').evaluate(html => ({
       theme:html.dataset.playdeckAppearance,
+      rootControlBg:getComputedStyle(html).getPropertyValue('--playdeck-control-bg'),
+      buttonControlBg:getComputedStyle(document.querySelector('#panel button')).getPropertyValue('--playdeck-control-bg'),
       selected:document.querySelector('#player-settings [name="appearance"]')?.value,
       status:document.querySelector('[data-settings-status]')?.textContent
     }))));

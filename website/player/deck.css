@@ -328,3 +328,14 @@ body > #panel.playdeck-closing {
     animation:none!important;transition:none!important;filter:none!important
   }
 }
+
+/* Mode-specific enforcement wins over legacy !important player rules.
+   All interactive chrome is completely unfilled in Transparent mode. */
+:root[data-playdeck-appearance='transparent'] #game-menu-bar :is(button,summary,select,input,textarea),
+:root[data-playdeck-appearance='transparent'] body > #panel :is(button,summary,select,input,textarea),
+:root[data-playdeck-appearance='transparent'] #tv-cast :is(button,summary,select,input,textarea),
+:root[data-playdeck-appearance='transparent'] .deck-modal :is(button,summary,select,input,textarea) {
+  background:transparent!important;
+  background-color:transparent!important;
+  box-shadow:none!important;
+}

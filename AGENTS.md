@@ -32,3 +32,5 @@
 - While a player menu is open, the game iframe's pointer-events are disabled by the shared open-menu CSS gate. This prevents game content from stealing clicks from popup controls. A click outside goes to the launcher and dismisses the panel; after closing completes, iframe pointer events recover automatically. Controller shadow DOM also toggles the body class for this gate.
 
 - The toolbar is a viewport-sized fixed flex container with `pointer-events:none` on the wrapper and `pointer-events:auto` on the menu controls/panels. This is essential: an absolutely positioned popover outside a 34 px-tall toolbar had a visual bounding box but Chrome sent clicks to the underlying iframe/page. Keep the transparent container full-screen and dock children to the bottom.
+
+- Apply a mode-specific `:root[data-playdeck-appearance='transparent']` override for buttons, summaries, dropdowns and fields across Game, Settings, Display and dialogs. This must outrank legacy `!important` controls, not merely set variables that a stronger rule could ignore. Glass uses filled shared tokens.
