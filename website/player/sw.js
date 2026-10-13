@@ -84,7 +84,7 @@ export function isAsset(request) {
 // Retained for callers; downloads have no per-file size limit.
 export const MAX_CACHE_BYTES=8*1024*1024;
 let lastActivityNotification=0;
-export export function isStaticFileRequest(request) {
+export function isStaticFileRequest(request) {
   const path=new URL(request.url).pathname;
   return request.method==='GET' && /\.[a-z0-9]{1,16}$/i.test(path) && !/\.(?:html?|xhtml)$/i.test(path);
 }
