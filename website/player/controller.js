@@ -484,6 +484,11 @@ export function installController({ profileId, getFrame, forceMapping = false })
     #panel{bottom:calc(var(--player-height,34px) + 8px);width:min(300px,calc(100vw - 20px));padding:16px;border-radius:12px}
     button,input:not([type=range]):not([type=checkbox]),select,details{border:0;outline:0;background:var(--player-glass,rgba(38,38,38,.72));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
     button:hover,summary:hover,button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:0;background:var(--player-hover,rgba(54,54,54,.82));box-shadow:inset 0 0 0 2px #ffffff18}
+    /* Follow the shared player policy inside the controller shadow root. */
+    #toggle,button,details,summary{background:transparent!important;box-shadow:none!important}
+    #toggle,button,details{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+    button:hover,summary:hover{background:transparent!important;color:#fff;box-shadow:none!important}
+    button:focus-visible,summary:focus-visible{background:transparent!important;box-shadow:none!important;outline:2px solid #ddd!important;outline-offset:2px}
   </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
   <section id="panel" hidden aria-label="Controller settings"><header><h2>Controller mapping</h2></header>
   <p id="status" role="status">Connect a controller and press a button.</p>

@@ -1,10 +1,10 @@
 # Playdeck UI rules
 
-- Reuse the toolbar's neutral gray glass style for all menus, dialogs, buttons, fields, cards, and summaries.
-- Use shared player CSS variables, translucent gray backgrounds, and backdrop blur. Do not add visible borders or outlines.
-- Keep focus visible through a lighter background or subtle inset shadow.
-- Match toolbar typography, rounded corners, compact spacing, and hover states. Apply the same rules inside controller shadow DOM.
-- Use Lucide icons for toolbar actions. Use fades and blur transitions, respecting reduced motion.
+- Use a consistent, compact neutral-gray UI with shared player CSS variables and Lucide action icons.
+- Panels and dialogs may have translucent gray glass backgrounds with blur. Toolbar controls, action buttons, and expandable settings headings must have transparent backgrounds, with no visible borders, inset rings, or boxed hover shadows.
+- Keep focus accessible: show a single clear outline only for keyboard `:focus-visible`, not for hover or normal pointer interaction. Never stack outlines on nested settings sections and summaries.
+- Keep typography, spacing, corner radii, and hover text colors consistent across the player, menus, dialogs, and controller shadow DOM.
+- Use subtle fade/blur transitions, respecting reduced motion.
 - Keep settings concise. Touch controls, Playback, Diagnostics, controller calibration, and controller presets have been removed. Response curve belongs under controller Advanced settings.
 - Saves exposes export/import saves; profile export/import stays collapsed under Settings backup.
-- Implement behavior globally, without game-specific hardcoding. Preserve concurrent changes.
+- Implement behavior globally without game-specific hardcoding. Preserve concurrent changes.

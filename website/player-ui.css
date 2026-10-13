@@ -32,14 +32,14 @@
   padding: 0 14px !important;
   border: 0 !important;
   border-radius: var(--player-radius) !important;
-  background: var(--player-glass) !important;
+  background: transparent !important;
   color: var(--player-text) !important;
   font: 400 12px/1.4 var(--player-font) !important;
   white-space: nowrap;
   cursor: pointer;
   list-style: none;
-  box-shadow: 0 4px 18px #0003 !important;
-  backdrop-filter: var(--player-blur);
+  box-shadow: none !important;
+  backdrop-filter: none;
   -webkit-backdrop-filter: var(--player-blur);
   transition: background 0.18s;
 }
@@ -50,7 +50,8 @@
 .game-menu summary:hover,
 .game-display summary:hover,
 #game-menu-bar #badge:hover {
-  background: var(--player-hover) !important;
+  background: transparent !important;
+  color: #fff !important;
 }
 .game-menu .game-menu-panel,
 .game-display .display-panel,
@@ -106,19 +107,21 @@ body > #panel select,
   padding: 10px 12px !important;
   border: 0 !important;
   border-radius: 10px !important;
-  background: var(--player-control) !important;
+  background: transparent !important;
   color: var(--player-text) !important;
   font: 400 13px/1.4 var(--player-font) !important;
   cursor: pointer;
 }
-.game-menu .game-menu-panel button {
-  background: transparent !important;
+.game-display select,
+body > #panel select {
+  background: var(--player-control) !important;
 }
 .game-menu .game-menu-panel button:hover,
 .game-display button:hover,
 body > #panel button:hover,
 #loading button:hover {
-  background: rgba(255, 255, 255, 0.14) !important;
+  background: transparent !important;
+  color: #fff !important;
 }
 .game-display h2,
 body > #panel strong {
@@ -193,7 +196,8 @@ body > #panel :focus-visible,
   left: calc(50% - var(--display-panel-offset, 0px)) !important;
 }
 #toolbar-restore {
-  background: var(--player-glass) !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--player-text) !important;
   font: 400 12px/1.4 var(--player-font) !important;
   opacity: 1 !important;
@@ -332,11 +336,12 @@ body > iframe {
   min-height: 40px;
   padding: 10px 12px !important;
   border-radius: 10px !important;
-  background: var(--player-control) !important;
+  background: transparent !important;
   color: var(--player-text) !important;
   font: 400 13px/1.4 var(--player-font) !important;
 }
 #tv-cast select {
+  background: var(--player-control) !important;
   width: 100%;
   min-width: 0;
 }
@@ -628,4 +633,21 @@ body > #panel button {
 #game-menu-bar .game-display summary,
 #game-menu-bar #badge {
   gap: 6px;
+}
+
+/* Transparent toolbar actions: panels retain glass, but clickable chrome does not. */
+#game-menu-bar .game-menu summary,
+#game-menu-bar .game-display summary,
+#game-menu-bar #badge,
+#toolbar-restore {
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+#game-menu-bar .game-menu summary:hover,
+#game-menu-bar .game-display summary:hover,
+#game-menu-bar #badge:hover {
+  background: transparent !important;
+  color: #fff !important;
 }
