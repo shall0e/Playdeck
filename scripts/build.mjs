@@ -64,10 +64,13 @@ buildSync({
 const revision = process.env.GITHUB_SHA || 'local';
 writeFileSync('dist/player/build.json', JSON.stringify({ revision, compatibility:'deck-runtime-1', features:'deck-2' }));
 writeFileSync('dist/player/version.js',readFileSync('website/player/version.js','utf8').replace("BUILD_REVISION='local'","BUILD_REVISION="+JSON.stringify(revision)));
-const html = readFileSync('dist/player/index.html', 'utf8').replace(
-  '<head>',
-  '<head><meta name="playdeck-build" content="' + revision + '">',
-);
+// Version every player stylesheet with the deployment revision. The UI and
+// service worker may update independently, but stale CSS must never override
+// a newer menu implementation or leave the appearance switch out of sync.
+const html = readFileSync('dist/player/index.html', 'utf8')
+  .replace('<head>', '<head><meta name="playdeck-build" content="' + revision + '">')
+  .replace('/player-ui.css?v=player-updates-1', '/player-ui.css?v=' + encodeURIComponent(revision))
+  .replace('href="/player/deck.css"', 'href="/player/deck.css?v=' + encodeURIComponent(revision) + '"');
 writeFileSync('dist/player/index.html', html);
 const source = ['website', 'tests', 'scripts', '.github'].flatMap((root) =>
   files(root).map((file) => ({ ...file, name: root + '/' + file.name })),

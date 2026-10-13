@@ -86,6 +86,8 @@ try {
     await castButton.click({timeout:5000});
     assert.equal(await root.locator('#tv-cast').evaluate(dialog => dialog.open), true);
     await root.locator('#tv-cast button[aria-label="Close"]').click();
+    console.log('Player stylesheet URLs',JSON.stringify(await root.locator('html').evaluate(() =>
+      Array.from(document.querySelectorAll('link[rel="stylesheet"]'),el=>el.href))));
     // Original Glass controls must have filled backgrounds; Transparent must not.
     await root.locator('#badge').click();
     const appearance = root.locator('#player-settings select[name="appearance"]');

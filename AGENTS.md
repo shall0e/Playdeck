@@ -34,3 +34,5 @@
 - The toolbar is a viewport-sized fixed flex container with `pointer-events:none` on the wrapper and `pointer-events:auto` on the menu controls/panels. This is essential: an absolutely positioned popover outside a 34 px-tall toolbar had a visual bounding box but Chrome sent clicks to the underlying iframe/page. Keep the transparent container full-screen and dock children to the bottom.
 
 - Apply a mode-specific `:root[data-playdeck-appearance='transparent']` override for buttons, summaries, dropdowns and fields across Game, Settings, Display and dialogs. This must outrank legacy `!important` controls, not merely set variables that a stronger rule could ignore. Glass uses filled shared tokens.
+
+- Every deployed player HTML build must attach the current GitHub revision as a query string to both `/player-ui.css` and `/player/deck.css`. Do not reintroduce static style URLs: an HTML/JS deployment with cached old CSS breaks the menu appearance and interactivity.

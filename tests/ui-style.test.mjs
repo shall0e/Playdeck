@@ -70,3 +70,9 @@ test('empty areas of visible fullscreen toolbar pass clicks through to game',()=
   assert.match(css,/#game-menu-bar\.is-visible \{pointer-events:none!important\}/);
   assert.match(css,/#game-menu-bar\.is-visible > \* \{pointer-events:auto!important\}/);
 });
+
+test('deployed player always uses deployment-revisioned stylesheet URLs',()=>{
+  const build=readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');
+  assert.match(build,/player-ui\.css\?v=' \+ encodeURIComponent\(revision\)/);
+  assert.match(build,/player\/deck\.css\?v=' \+ encodeURIComponent\(revision\)/);
+});
