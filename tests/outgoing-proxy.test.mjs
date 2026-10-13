@@ -15,7 +15,8 @@ test('direct game-origin requests use the local-first player proxy',async()=>{
   assert.equal(routed.headers.get('Content-Type'),'text/plain');
   assert.equal(proxyOutgoingGameRequest(new Request(source),origin+'/player/',origin).url,source);
   assert.equal(proxyOutgoingGameRequest(new Request(origin+'/player/boot.js'),game,origin).url,origin+'/player/boot.js');
-  assert.equal(proxyOutgoingGameRequest(new Request('http://game.example/asset.bin'),game,origin).url,'http://game.example/asset.bin');
+  assert.equal(proxyOutgoingGameRequest(new Request('http://game.example/asset.bin'),game,origin).url,
+    origin+'/player/games/.launch/12345678-abcd/full/101/gameid/.net/http/game.example/asset.bin');
 });
 
 test('blob workers only inherit an unambiguous active game route',()=>{

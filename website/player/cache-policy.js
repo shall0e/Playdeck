@@ -1,11 +1,13 @@
 import {canonicalGameURL,proxyContext,GAME_PREFIX} from './session.js';
-import {bootstrap} from './proxy-core.js';
+import {bootstrap,ASSET_VERSION,rewriteJS,rewriteCSS} from './proxy-core.js';
 import {parse} from './vendor/acorn.js';
 import {restoreLegacyIdentity} from './rewrite.js';
+import {targetFromProxy} from './network-url.js';
 
 export function staticResponse(request,response) {
   const url=canonicalGameURL(request.url),type=response.headers.get('Content-Type') || '';
   if(request.method!=='GET' || response.status!==200)return false;
+  if(/text\/event-stream/i.test(type))return false;
   if(/\.(?:json|wasm|bin|data|pak|pk3|zip|js|mjs)$/i.test(url.pathname) && /html/i.test(type))return false;
   if(/(?:^|\/)(?:api|graphql|auth|login|logout|session|sessions|user|account|save|progress)(?:\/|\.|$)/i.test(url.pathname))return false;
   if(/json|xml/i.test(type)) {
@@ -35,17 +37,20 @@ export async function routeCachedResponse(response,request) {
   if(oldOrigin!==origin)text=text.split(JSON.stringify(oldOrigin)).join(JSON.stringify(origin));
   headers.set('X-Playdeck-Origin',origin);
   const target=canonicalGameURL(request.url);
-  const source='https://'+target.pathname.slice(GAME_PREFIX.length)+target.search;
-  if(response.headers.get('X-Playdeck-Compatibility')!=='deck-runtime-1') {
+  const source=targetFromProxy(target,GAME_PREFIX).href;
+  if(response.headers.get('X-Playdeck-Compatibility')!=='deck-runtime-1' || response.headers.get('X-Playdeck-Network')!==ASSET_VERSION) {
     if(/html/i.test(response.headers.get('Content-Type') || '')) {
       text=text.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi,(match,attributes,body)=>/(?:data-cfasync|data-playdeck-bootstrap)/.test(attributes) && /__timebombPerformanceInstalled|__playdeckProxyInstalled/.test(body)?'':match.replace(body,restoreLegacyIdentity(body)));
       const injected=bootstrap(source,origin,false,context.prefix,context.mode);
       text=/<head\b[^>]*>/i.test(text)?text.replace(/<head\b[^>]*>/i,match=>match+injected):injected+text;
     }else if(/javascript|ecmascript/i.test(response.headers.get('Content-Type') || '')) {
       try{const ast=parse(text,{ecmaVersion:'latest',sourceType:'module',allowReturnOutsideFunction:true});const first=ast.body[0];if(first?.type==='ExpressionStatement' && /__timebombPerformanceInstalled|__playdeckProxyInstalled/.test(text.slice(first.start,first.end)))text=text.slice(first.end);}catch{}
-      text=bootstrap(source,origin,true,context.prefix,context.mode)+'\n'+restoreLegacyIdentity(text);
+      text=bootstrap(source,origin,true,context.prefix,context.mode)+'\n'+rewriteJS(restoreLegacyIdentity(text),source,origin,context.prefix);
+    }else if(/css/i.test(response.headers.get('Content-Type') || '')) {
+      text=rewriteCSS(text,source,origin,context.prefix,'full');
     }
     headers.set('X-Playdeck-Compatibility','deck-runtime-1');
+    headers.set('X-Playdeck-Network',ASSET_VERSION);
   }
   return new Response(text,{status:response.status,statusText:response.statusText,headers});
 }

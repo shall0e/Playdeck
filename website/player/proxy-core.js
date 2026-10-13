@@ -1,3 +1,6 @@
+import {proxyURL,targetFromProxy} from './network-url.js';
+export {proxyURL,targetFromProxy} from './network-url.js';
+import {installNetworkProxy} from './network.js';
 import {installPerformance} from './performance.js';
 export {installPerformance as installMobilePerformance} from './performance.js';
 import {decodeS3TC,installS3TC} from './s3tc.js';
@@ -9,7 +12,7 @@ import {installCookieNamespace,restoreCookie} from './cookies.js';
 const LEGACY_PREFIX = '/__game/';
 const PREFIX = LEGACY_PREFIX + 'v4/';
 const LOCAL_PREFIX = '/player/games/';
-const ASSET_VERSION='deck-runtime-1';
+const ASSET_VERSION='deck-network-2';
 // Wrangler adds __name calls inside serialized functions when keeping names.
 // Supply the helper in the injected realm, isolated from the game's own bindings.
 const INJECTED_NAMES='const __name=(fn,name)=>{try{Object.defineProperty(fn,"name",{value:name,configurable:true});}catch{}return fn;};';
@@ -72,21 +75,8 @@ function publicHost(host) {
   return /^[a-z0-9.-]+$/i.test(host) && host.includes('.') && !/^\d+(\.\d+){3}$/.test(host) &&
     !/(^|\.)(localhost|local|internal|test|invalid)$/.test(host);
 }
-export function targetFromProxy(url, prefix = PREFIX) {
-  if (!url.pathname.startsWith(prefix)) throw new Error('Invalid proxy path');
-  return new URL('https://' + url.pathname.slice(prefix.length) + url.search);
-}
-export function proxyURL(value, base, origin, prefix = PREFIX) {
-  if (!value || /^(#|data:|blob:|javascript:|mailto:|tel:)/i.test(value)) return value;
-  try {
-    const url = new URL(value, base);
-    if (url.origin === origin && url.pathname.startsWith(prefix)) return url.href;
-    if (url.protocol !== 'https:' || url.username || url.password || url.port) return value;
-    return origin + prefix + url.host + url.pathname + url.search + url.hash;
-  } catch { return value; }
-}
 // String source prevents bundlers from leaking private helper names into game pages.
-const CLIENT_HOOK = "function(base, origin, prefix, workerPrelude) {\n  const remote = value => {\n    const url = new URL(value, base);\n    if (url.origin !== origin) return url.href;\n    if (url.pathname.startsWith(prefix)) return 'https://' + url.pathname.slice(prefix.length) + url.search + url.hash;\n    return new URL(url.pathname + url.search + url.hash, base).href;\n  };\n  const map = value => {\n    if (typeof value !== 'string' && !(value instanceof URL)) return value;\n    value = String(value);\n    if (/^(#|data:|blob:|javascript:|mailto:|tel:)/i.test(value)) return value;\n    // import.meta.url-derived .pathname values already include the proxy route.\n    if (value.startsWith(prefix)) return origin + value;\n    try {\n      // The page's <base> may appear after this hook, or change at runtime.\n      const sourceBase = typeof document === 'object' ? remote(document.baseURI || base) : base;\n      let url = new URL(value, sourceBase);\n      if (url.origin === origin) {\n        if (url.pathname.startsWith(prefix)) return url.href;\n        url = new URL(url.pathname + url.search + url.hash, sourceBase);\n      }\n      return url.protocol === 'https:' && !url.username && !url.password && !url.port\n        ? origin + prefix + url.host + url.pathname + url.search + url.hash : value;\n    } catch { return value; }\n  };\n  globalThis.__playdeckMap=map;\n  const nativeFetch = globalThis.fetch.bind(globalThis);\n  globalThis.fetch = (input, options) => nativeFetch(input instanceof Request ? new Request(map(input.url), input) : map(input), options);\n  if (typeof XMLHttpRequest !== 'undefined') {\n    const nativeOpen = XMLHttpRequest.prototype.open;\n    XMLHttpRequest.prototype.open = function(method, url, ...args) { return nativeOpen.call(this, method, map(url), ...args); };\n  }\n  if (typeof importScripts === 'function') {\n    const nativeImport = importScripts;\n    globalThis.importScripts = (...urls) => nativeImport(...urls.map(map));\n  }\n  // Native engine-created blob workers execute outside the document hook.\n  // Prepend a small networking hook before the generated worker's own code.\n  const workerBlobs = new Map();\n  if (typeof URL.createObjectURL === 'function') {\n    const create = URL.createObjectURL.bind(URL);\n    URL.createObjectURL = blob => {\n      const url = create(blob);\n      if (typeof Blob !== 'undefined' && blob instanceof Blob) workerBlobs.set(url,blob);\n      return url;\n    };\n    if (typeof URL.revokeObjectURL === 'function') {\n      const revoke = URL.revokeObjectURL.bind(URL);\n      URL.revokeObjectURL = url => { workerBlobs.delete(String(url)); return revoke(url); };\n    }\n  }\n  for (const name of ['Worker', 'SharedWorker']) {\n    const Native = globalThis[name];\n    if (Native) globalThis[name] = new Proxy(Native, {construct(target, args, newTarget) {\n      const blob = workerBlobs.get(String(args[0]));\n      if (workerPrelude && blob && (!blob.type || /javascript|ecmascript/i.test(blob.type))) {\n        args[0] = URL.createObjectURL(new Blob([workerPrelude,'\\n',blob],{type:'text/javascript'}));\n      } else args[0] = map(args[0]);\n      return Reflect.construct(target, args, newTarget);\n    }});\n  }\n  if (typeof window === 'undefined') return;\n\n  let panicBind = null;\n  window.addEventListener('message', event => {\n    if (event.source === window.parent && (['https://timebomb.lol','https://www.timebomb.lol'].includes(event.origin) || event.origin === origin) && event.data?.type === 'playdeck:panic-config') panicBind = event.data.bind;\n  });\n  window.addEventListener('keydown', event => {\n    if (panicBind && !event.repeat && event.code === panicBind.code && event.ctrlKey === panicBind.ctrl && event.altKey === panicBind.alt && event.shiftKey === panicBind.shift && event.metaKey === panicBind.meta) {\n      event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'playdeck:panic'}, '*');\n    }\n  },true);\n  const srcset = value => /^\\s*data:/i.test(String(value)) ? value : String(value).split(',').map(part => part.trim().replace(/^(\\S+)/, url => map(url))).join(', ');\n  const nativeSetAttribute = Element.prototype.setAttribute;\n  Element.prototype.setAttribute = function(name, value) {\n    return nativeSetAttribute.call(this, name, /^(src|href|poster|action|data)$/i.test(name) ? map(value) : /^srcset$/i.test(name) ? srcset(value) : value);\n  };\n  for (const [name, prop] of [['HTMLImageElement','src'],['HTMLImageElement','srcset'],['HTMLScriptElement','src'],['HTMLLinkElement','href'],['HTMLMediaElement','src'],['HTMLMediaElement','poster'],['HTMLSourceElement','src'],['HTMLSourceElement','srcset'],['HTMLIFrameElement','src'],['HTMLAnchorElement','href'],['HTMLAreaElement','href'],['HTMLObjectElement','data'],['HTMLFormElement','action']]) {\n    const type = window[name];\n    const descriptor = type && Object.getOwnPropertyDescriptor(type.prototype, prop);\n    if (descriptor?.set && descriptor.configurable) Object.defineProperty(type.prototype, prop, {...descriptor, set(value) { descriptor.set.call(this, prop === 'srcset' ? srcset(value) : map(value)); }});\n  }\n  for (const name of ['pushState','replaceState']) {\n    const native = history[name].bind(history);\n    history[name] = (state, title, url) => native(state, title, url == null ? url : map(url));\n  }\n  if (navigator.serviceWorker) {\n    const nativeRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);\n    navigator.serviceWorker.register = (script, options = {}) => {\n      const root = origin + prefix + new URL(base).host + '/';\n      const scriptURL = new URL(map(script));\n      const scopeURL = options.scope ? new URL(map(options.scope)) : new URL('./', scriptURL);\n      if (!scriptURL.href.startsWith(root) || !scopeURL.href.startsWith(root)) return Promise.reject(new Error('Worker scope must remain inside this game.'));\n      return nativeRegister(scriptURL.href, {...options, scope:scopeURL.href});\n    };\n  }\n}\n";
+const CLIENT_HOOK = installNetworkProxy.toString();
 export function bootstrap(base, origin, worker = false, prefix = PREFIX, mode='auto') {
   const params = [base, origin, prefix].map(value => JSON.stringify(value).replace(/</g, '\\u003c')).join(',');
   const local=prefix.startsWith(LOCAL_PREFIX);
@@ -96,8 +86,9 @@ export function bootstrap(base, origin, worker = false, prefix = PREFIX, mode='a
   const pointer=local?'('+installPointerCompatibility.toString()+')();':'';
   const identity=local && proxyContext(prefix).compatibility.identity?'('+installPageIdentity.toString()+')('+params+');':'';
   const performance=local?'('+installPerformance.toString()+')(context.mode,context.session?"playdeck-performance:"+context.session:'+JSON.stringify('timebomb-performance:'+new URL(base).origin)+');':'';
-  const workerPrelude='('+CLIENT_HOOK+')('+params+');';
-  const script='(()=>{if(globalThis.__playdeckProxyInstalled)return;globalThis.__playdeckProxyInstalled=true;'+INJECTED_NAMES+context+runtime+identity+desktop+performance+pointer+s3tcBootstrap(base,prefix)+'('+installCookieNamespace.toString()+')('+params+');('+CLIENT_HOOK+')('+params+','+JSON.stringify(workerPrelude)+');})();';
+  const networkHelpers=','+proxyURL.toString()+','+targetFromProxy.toString();
+  const workerPrelude='(()=>{'+INJECTED_NAMES+'('+CLIENT_HOOK+')('+params+',null'+networkHelpers+');})();';
+  const script='(()=>{if(globalThis.__playdeckProxyInstalled)return;globalThis.__playdeckProxyInstalled=true;'+INJECTED_NAMES+context+runtime+identity+desktop+performance+pointer+s3tcBootstrap(base,prefix)+'('+installCookieNamespace.toString()+')('+params+','+targetFromProxy.toString()+');('+CLIENT_HOOK+')('+params+','+JSON.stringify(workerPrelude)+networkHelpers+');})();';
   return worker?script:'<script data-cfasync="false" data-playdeck-bootstrap>'+script+'</script>';
 }
 export function s3tcBootstrap(base,prefix) {
@@ -133,7 +124,7 @@ export function installPageIdentity(base, origin, prefix) {
 
 export function rewriteJS(text,base,origin,prefix=PREFIX) {
   const local=prefix.startsWith(LOCAL_PREFIX),filename=new URL(base).pathname.split('/').pop();
-  text=rewriteJavaScript(text,{identity:local && proxyContext(prefix).compatibility.identity,mobile:local,mapURL:value=>/^(?:https:\/\/|\/\/|\.{1,2}\/|\/(?!\/))/.test(value)?proxyURL(value,base,origin,prefix):value});
+  text=rewriteJavaScript(text,{network:true,identity:local && proxyContext(prefix).compatibility.identity,mobile:local,mapURL:value=>/^(?:https?:\/\/|\/\/|\.{1,2}\/|\/(?!\/))/.test(value)?proxyURL(value,base,origin,prefix):value});
   return local && /\.mjs$|(?:^|[-_.])worker(?:[-_.]|$)/i.test(filename)?s3tcBootstrap(base,prefix)+'\n'+text:text;
 }
 // Kept as an API alias; compatibility now installs in every realm by capability.
@@ -155,7 +146,8 @@ export function scopedCookie(value, target, prefix = PREFIX) {
   const remotePath = path?.startsWith('/') ? path : target.pathname.slice(0,target.pathname.lastIndexOf('/')+1) || '/';
   const attributes = parts.filter(value => /^(expires|max-age|httponly)(=|$)/i.test(value));
   const launched=prefix.includes('/.launch/'),encoded=Array.from(remotePath,char=>char.charCodeAt(0).toString(16).padStart(2,'0')).join('');
-  return cookiePrefix(target.hostname) + (launched?'_p'+encoded+'_':'') + first + '; ' + [...attributes, 'Path=' + (launched?LOCAL_PREFIX:prefix + target.host + remotePath), 'Secure','SameSite=None','Partitioned'].join('; ');
+  const route=target.protocol==='https:' && !target.port?target.host:'.net/'+target.protocol.slice(0,-1)+'/'+target.host;
+  return cookiePrefix(target.hostname) + (launched?'_p'+encoded+'_':'') + first + '; ' + [...attributes, 'Path=' + (launched?LOCAL_PREFIX:prefix + route + remotePath), 'Secure','SameSite=None','Partitioned'].join('; ');
 }
 function upstreamHeaders(request, target) {
   const headers = new Headers();

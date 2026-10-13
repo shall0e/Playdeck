@@ -86,6 +86,12 @@ For Cloudflare Git integration: framework None, root `/`, build command `node sc
 
 The proxy derives its host from each request, so previews and custom domains work without source changes. It rejects proxy loops, private network names/addresses and credential-bearing URLs. Optional `FRAME_ANCESTORS` restricts sandbox embedding. Run Playdeck on its own origin, apart from your launcher and other applications.
 
+## Network routing
+
+Public HTTP(S) dependencies and WebSocket signaling use the sandbox proxy, including fetch/XHR, beacons, EventSource, worker requests, module imports, and dynamically inserted HTML/CSS. HTTPS assets retain their existing routes; HTTP, sockets, and nondefault ports use `.net/<protocol>/<host>/` inside the same game route. Live event streams are never cached as downloads. Cached game documents receive updated network hooks locally without redownloading saved binary files.
+
+WebRTC peer traffic and WebTransport are separate transports; this HTTP/WebSocket proxy does not relay them. Multiplayer games that require relayed WebRTC traffic need a TURN service configured by the game.
+
 ## Storage
 
 Each instance has its own browser-origin storage. Existing key names are retained, but a new origin cannot read old Timebomb downloads, cookies or saves. Games download again on the new instance; exports from games must be imported manually where supported. Game support still depends on the browser's graphics, memory and input capabilities.

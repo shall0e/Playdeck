@@ -1,3 +1,4 @@
+import {proxyURL,targetFromProxy} from './network-url.js';
 export const GAME_PREFIX = '/player/games/';
 export const COMPATIBILITY_VERSION = 'deck-runtime-1';
 export const compatibilityDefaults = {desktop:true,identity:false,textures:true};
@@ -52,7 +53,8 @@ export function recoverGameRequest(request, clientURLs) {
       if (original.origin !== client.origin) continue;
       const context = proxyContext(client.pathname);
       let prefix = client.pathname.startsWith(GAME_PREFIX) ? context.prefix : client.pathname.startsWith('/__game/v4/') ? '/__game/v4/' : null;
-      let host = prefix ? client.pathname.slice(prefix.length).split('/')[0] : null;
+      let source=prefix?targetFromProxy(client,prefix):null;
+      let host = source?.hostname;
       // When a service worker restarts or storage is blocked, recover the
       // upstream host from the initiating launcher rather than serving Pages HTML.
       if (!prefix && client.pathname === '/player/' &&
@@ -70,7 +72,8 @@ export function recoverGameRequest(request, clientURLs) {
       }
       if (!prefix || !host || !/^[a-z0-9.-]+$/i.test(host) || !host.includes('.')) continue;
       const incoming = new URL(original);
-      incoming.pathname = prefix + host + original.pathname;
+      const remote=source || new URL('https://'+host+'/');
+      incoming.href=proxyURL(remote.origin+original.pathname+original.search,remote.href,original.origin,prefix);
       const headers = new Headers(request.headers);
       headers.set('X-Playdeck-Destination', request.destination || headers.get('X-Playdeck-Destination') || headers.get('sec-fetch-dest') || 'empty');
       return new Request(incoming, {...{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:request.redirect,credentials:request.credentials,cache:request.cache,integrity:request.integrity,signal:request.signal},mode:request.mode==='navigate'?'same-origin':request.mode,...(!['GET','HEAD'].includes(request.method)?{duplex:'half'}:{})});
@@ -79,23 +82,22 @@ export function recoverGameRequest(request, clientURLs) {
   return request;
 }
 
-/* Controlled game frames can issue native requests directly to other HTTPS
+/* Controlled game frames can issue native requests directly to other HTTP(S)
  * origins (WASM engines, media decoders and workers often bypass page hooks).
  * Route those subresource requests into the same local-first game proxy. */
 export function proxyOutgoingGameRequest(request,clientURL,playerOrigin) {
   try {
     const target=new URL(request.url),client=new URL(clientURL),site=new URL(playerOrigin);
-    if(target.protocol!=='https:' || target.origin===site.origin ||
-       target.username || target.password || target.port ||
+    if(!/^https?:$/.test(target.protocol) || target.origin===site.origin ||
+       target.username || target.password ||
        !/^[a-z0-9.-]+$/i.test(target.hostname) || !target.hostname.includes('.') ||
-       client.origin!==site.origin || !client.pathname.startsWith(GAME_PREFIX) ||
-       request.mode==='navigate')return request;
+       client.origin!==site.origin || !client.pathname.startsWith(GAME_PREFIX))return request;
     const context=proxyContext(client.pathname);
-    const gameHost=client.pathname.slice(context.prefix.length).split('/')[0];
+    const gameHost=targetFromProxy(client,context.prefix).hostname;
     if(!/^[a-z0-9.-]+$/i.test(gameHost) || !gameHost.includes('.'))return request;
     const headers=new Headers(request.headers);
     headers.set('X-Playdeck-Destination',request.destination || headers.get('X-Playdeck-Destination') || headers.get('sec-fetch-dest') || 'empty');
-    const proxied=site.origin+context.prefix+target.host+target.pathname+target.search;
+    const proxied=proxyURL(target.href,client.href,site.origin,context.prefix);
     return new Request(proxied,{
       method:request.method,headers,
       body:['GET','HEAD'].includes(request.method)?undefined:request.body,
@@ -114,7 +116,7 @@ export function gameRequestClient(clientURL,frameURLs=[]) {
   for(const value of frameURLs)try{
     const url=new URL(value),context=proxyContext(url.pathname);
     if(!url.pathname.startsWith(GAME_PREFIX))continue;
-    const host=url.pathname.slice(context.prefix.length).split('/')[0];
+    const host=targetFromProxy(url,context.prefix).hostname;
     if(!/^[a-z0-9.-]+$/i.test(host) || !host.includes('.'))continue;
     matches.push({url:value,scope:url.origin+context.prefix+host});
   }catch{}

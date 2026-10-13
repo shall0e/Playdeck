@@ -15,7 +15,7 @@ function walk(node,visit,parent=null) {
   }
 }
 
-export function rewriteJavaScript(source,{mapURL=value=>value,identity=false,mobile=false}={}) {
+export function rewriteJavaScript(source,{mapURL=value=>value,identity=false,mobile=false,network=false}={}) {
   if(source.length>1024*1024)return rewriteLargeImports(source,mapURL);
   const ast=tree(source);
   if(!ast)return source; // Unknown syntax must remain byte-for-byte intact.
@@ -24,7 +24,25 @@ export function rewriteJavaScript(source,{mapURL=value=>value,identity=false,mob
   let shadowedLocation=false;
   walk(ast,node=>{if(node.type==='VariableDeclarator' && node.id.type==='Identifier' && node.id.name==='location')shadowedLocation=true;if(/Function/.test(node.type) && node.params?.some(p=>p.type==='Identifier' && p.name==='location'))shadowedLocation=true;});
   const locationObject=node=>node?.type==='Identifier' ? !shadowedLocation && node.name==='location' : node?.type==='MemberExpression' && !node.computed && node.property.name==='location' && node.object.type==='Identifier' && ['window','self','globalThis','document'].includes(node.object.name);
+  const parents=new WeakMap(),locationScopes=[];
+  if(network) {
+    walk(ast,(node,parent)=>{if(parent)parents.set(node,parent);});
+    walk(ast,node=>{
+      if(/Function/.test(node.type) && node.params?.some(param=>param.type==='Identifier' && param.name==='location'))locationScopes.push(node);
+      if(node.type==='VariableDeclarator' && node.id.type==='Identifier' && node.id.name==='location') {
+        const declaration=parents.get(node),block=declaration?.kind!=='var';let scope=parents.get(declaration);
+        while(scope && scope.type!=='Program' && !/Function/.test(scope.type) && !(block && scope.type==='BlockStatement'))scope=parents.get(scope);
+        if(scope)locationScopes.push(scope);
+      }
+    });
+  }
+  const networkLocation=node=>node?.type==='Identifier'?node.name==='location' && !locationScopes.some(scope=>node.start>=scope.start && node.end<=scope.end):locationObject(node);
   walk(ast,(node,parent)=>{
+    if(network) {
+      const navigation=node.type==='AssignmentExpression' && node.operator==='=' && (networkLocation(node.left) || (node.left.type==='MemberExpression' && !node.left.computed && node.left.property.name==='href' && networkLocation(node.left.object)))?node.right:
+        node.type==='CallExpression' && node.callee.type==='MemberExpression' && !node.callee.computed && ['assign','replace'].includes(node.callee.property.name) && networkLocation(node.callee.object)?node.arguments[0]:null;
+      if(navigation && navigation.type!=='SpreadElement')edits.push({start:navigation.start,end:navigation.start,text:'globalThis.__playdeckMap('},{start:navigation.end,end:navigation.end,text:')'});
+    }
     if(mobile && node.type==='IfStatement' && node.consequent.type==='ReturnStatement' && node.consequent.argument?.type==='ObjectExpression'){
       const gate=node.consequent.argument.properties.some(property=>property.key?.name==='kind' && property.value?.value==='mobile'),condition=source.slice(node.test.start,node.test.end);
       if(gate && /navigator\s*\.\s*userAgent/.test(condition) && /Android|iPhone|iPad|Mobile/.test(condition))edits.push({start:node.test.start,end:node.test.end,text:'globalThis.__playdeckContext?.compatibility?.desktop===false && ('+condition+')'});
@@ -50,6 +68,16 @@ export function rewriteJavaScript(source,{mapURL=value=>value,identity=false,mob
 
 export function executableScript(type) {
   return !type || /^(?:module|(?:text|application)\/(?:java|ecma)script(?:\s*;.*)?)$/i.test(type.trim());
+}
+
+export function rewriteImportMap(source,mapURL) {
+  try {
+    const map=JSON.parse(source);
+    const entries=table=>Object.fromEntries(Object.entries(table).map(([key,value])=>[key,typeof value==='string'?mapURL(value):value]));
+    if(map.imports)map.imports=entries(map.imports);
+    if(map.scopes)map.scopes=Object.fromEntries(Object.entries(map.scopes).map(([key,value])=>[mapURL(key),entries(value)]));
+    return JSON.stringify(map);
+  }catch{return source;}
 }
 
 export function rewriteMobilePolicy(source) {
