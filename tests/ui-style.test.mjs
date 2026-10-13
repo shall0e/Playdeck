@@ -32,3 +32,18 @@ test('settings categories own their existing controls without breaking saved val
   assert.match(css,/scrollbar-gutter:auto!important/);
   assert.match(controller,/#panel #keybind-options > summary::after \{content:none!important/);
 });
+
+test('glass buttons are filled, transparent mode remains unfilled, and anchored menus never scale',()=>{
+  const css=readFileSync(new URL('../website/player/deck.css',import.meta.url),'utf8');
+  const chrome=readFileSync(new URL('../website/player-ui.css',import.meta.url),'utf8');
+  const shadow=readFileSync(new URL('../website/player/controller.js',import.meta.url),'utf8');
+  const toolbar=readFileSync(new URL('../website/player/toolbar.js',import.meta.url),'utf8');
+  assert.match(css,/--playdeck-control-bg: rgba\(255,255,255,\.095\)/);
+  assert.match(css,/--playdeck-control-bg: transparent/);
+  assert.match(css,/background: var\(--playdeck-control-bg\) !important/);
+  assert.match(shadow,/var\(--playdeck-control-bg/);
+  assert.doesNotMatch(chrome,/#game-menu-bar\.is-visible > \*\s*\{\s*animation:/);
+  assert.doesNotMatch(css,/scale:\.955/);
+  assert.doesNotMatch(shadow,/scale:\.955/);
+  assert.match(toolbar,/doc\.addEventListener\('pointerdown', dismiss/);
+});

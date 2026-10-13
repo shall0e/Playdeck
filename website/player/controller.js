@@ -637,40 +637,43 @@ export function installController({ profileId, getFrame, forceMapping = false })
     #panel {scrollbar-width:none!important;scrollbar-gutter:auto!important;overflow-x:hidden!important}
     @media(prefers-reduced-motion:reduce){#panel :is(button,input,select,summary),#toggle{transition:none!important}}
 
-    /* Shared layered motion: panel closes before the toolbar retracts. */
-    #panel:not([hidden]){animation:playdeck-panel-enter 230ms cubic-bezier(.16,1,.3,1) both}
-    #panel.playdeck-closing{animation:playdeck-panel-exit 210ms cubic-bezier(.4,0,1,1) both;pointer-events:none}
-    #panel:not([hidden]) > header,#panel:not([hidden]) > .row,
-    #panel:not([hidden]) > p {
-      animation:playdeck-control-enter 240ms cubic-bezier(.16,1,.3,1) both
+    /* Match the shared theme. Glass has filled controls; Transparent does not. */
+    #toggle,#panel :is(button,summary) {
+      background:var(--playdeck-control-bg,rgba(255,255,255,.095))!important;
+      transition:background-color 130ms ease,color 130ms ease!important
     }
-    @keyframes playdeck-panel-enter{
-      from{opacity:0;filter:blur(9px);translate:0 12px;scale:.955}
-      to{opacity:1;filter:blur(0);translate:0 0;scale:1}
+    #toggle:hover,#panel :is(button,summary):hover {
+      background:var(--playdeck-control-hover-bg,rgba(255,255,255,.16))!important
     }
-    @keyframes playdeck-panel-exit{
-      from{opacity:1;filter:blur(0);translate:0 0;scale:1}
-      to{opacity:0;filter:blur(9px);translate:0 12px;scale:.955}
+    #toggle[aria-expanded=true]{
+      background:var(--playdeck-control-active-bg,rgba(255,255,255,.21))!important
     }
-    @keyframes playdeck-control-enter{
-      from{opacity:0;filter:blur(3px);translate:0 5px}
+    #panel :is(select,input:not([type=checkbox]):not([type=range]),textarea) {
+      background:var(--playdeck-field-bg,rgba(255,255,255,.075))!important
+    }
+    #panel :is(select,input:not([type=checkbox]):not([type=range]),textarea):hover {
+      background:var(--playdeck-control-hover-bg,rgba(255,255,255,.16))!important
+    }
+    #panel:not([hidden]) {animation:playdeck-panel-enter 180ms ease-out both}
+    #panel.playdeck-closing {animation:playdeck-panel-exit 210ms ease-in both;pointer-events:none}
+    @keyframes playdeck-panel-enter {
+      from{opacity:0;filter:blur(5px);translate:0 7px}
       to{opacity:1;filter:blur(0);translate:0 0}
     }
-    #panel details::details-content{
-      content-visibility:visible;
-      overflow:clip;height:0;opacity:0;filter:blur(4px);translate:0 -5px;
-      transition:height 220ms cubic-bezier(.16,1,.3,1),
-        opacity 200ms ease,filter 220ms ease,translate 220ms ease;
-      transition-behavior:allow-discrete
+    @keyframes playdeck-panel-exit {
+      from{opacity:1;filter:blur(0);translate:0 0}
+      to{opacity:0;filter:blur(5px);translate:0 7px}
     }
-    #panel details[open]::details-content{
-      height:auto;opacity:1;filter:blur(0);translate:0 0
+    #panel details[open] > :not(summary) {
+      animation:playdeck-section-appear 170ms ease-out both
     }
-    @supports(interpolate-size:allow-keywords){#panel details{interpolate-size:allow-keywords}}
-    @media(prefers-reduced-motion:reduce){
-      #panel,#panel.playdeck-closing,#panel > *,#panel details::details-content{
-        animation:none!important;transition:none!important;
-        filter:none!important;translate:none!important;scale:1!important
+    @keyframes playdeck-section-appear {
+      from{opacity:0;filter:blur(3px)}
+      to{opacity:1;filter:blur(0)}
+    }
+    @media(prefers-reduced-motion:reduce) {
+      #panel,#panel.playdeck-closing,#panel details[open] > :not(summary) {
+        animation:none!important;filter:none!important
       }
     }
   </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>

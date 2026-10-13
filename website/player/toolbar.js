@@ -1,171 +1,197 @@
-// Shared menu lifecycle: panel exits before the toolbar retracts.
-// A single owner handles clicks in the launcher AND inside the game iframe.
-export const MENU_EXIT_MS=210;
-export function installToolbar(bar,settingsPanel,{getFrame,alwaysVisible=false}) {
-  const edge=document.createElement('button');
-  edge.id='toolbar-edge';
-  edge.type='button';
-  edge.setAttribute('aria-label','Show player controls');
-  edge.setAttribute('aria-controls',bar.id);
-  edge.setAttribute('aria-expanded','false');
+// One owner for Game, Display, Settings and Controller menu visibility.
+// Do not animate/transform toolbar children: they anchor the floating panels.
+export const MENU_EXIT_MS = 210;
+export function installToolbar(bar, settingsPanel, {getFrame, alwaysVisible = false}) {
+  const edge = document.createElement('button');
+  edge.id = 'toolbar-edge';
+  edge.type = 'button';
+  edge.setAttribute('aria-label', 'Show player controls');
+  edge.setAttribute('aria-controls', bar.id);
+  edge.setAttribute('aria-expanded', 'false');
   document.body.append(edge);
-  let timer,closingTimer,finishClosing=null,pointerOver=false,suppressReveal=false;
-  const reduced=()=>typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const duration=()=>reduced()?0:MENU_EXIT_MS;
-  const entries=()=>[
-    {name:'sandbox',node:settingsPanel,isOpen:()=>!settingsPanel.hidden,close:()=>{
-      settingsPanel.hidden=true;
-      bar.querySelector('#badge')?.setAttribute('aria-expanded','false');
-    }},
-    ...[...bar.querySelectorAll('details')].map(details=>({
-      name:details.classList?.contains?.('game-display')?'display':'game',
-      node:details.querySelector('.display-panel,.game-menu-panel') || details,
-      isOpen:()=>details.open,
-      close:()=>{details.open=false;}
+  let hideTimer, closeTimer, closing = null, pointerOver = false, blockHoverReveal = false;
+  const reducedMotion = () =>
+    typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const entries = () => [
+    {
+      name: 'sandbox',
+      panel: settingsPanel,
+      open: () => !settingsPanel.hidden,
+      finish: () => {
+        settingsPanel.hidden = true;
+        bar.querySelector('#badge')?.setAttribute('aria-expanded', 'false');
+      }
+    },
+    ...[...bar.querySelectorAll('details')].map(details => ({
+      name: details.classList?.contains?.('game-display') ? 'display' : 'game',
+      panel: details.querySelector('.display-panel,.game-menu-panel') || details,
+      open: () => details.open,
+      finish: () => {details.open = false;}
     })),
-    ...[...bar.children].filter(node=>node.shadowRoot).map(host=>({
-      name:'controller',
-      node:host.shadowRoot.querySelector('#panel'),
-      isOpen:()=>!!host.shadowRoot.querySelector('#panel:not([hidden])'),
-      close:()=>{}
+    ...[...bar.children].filter(node => node.shadowRoot).map(host => ({
+      name: 'controller',
+      panel: host.shadowRoot.querySelector('#panel'),
+      open: () => !!host.shadowRoot.querySelector('#panel:not([hidden])'),
+      finish: () => document.dispatchEvent(new Event('playdeck:game-interaction'))
     }))
-  ].filter(entry=>entry.node);
-  const hasOpen=()=>entries().some(entry=>entry.isOpen());
-  function cancelPending(){
-    clearTimeout(closingTimer);
-    if(finishClosing){const finish=finishClosing;finishClosing=null;finish();}
-  }
-  function show() {
-    clearTimeout(timer);
-    cancelPending();
+  ].filter(entry => entry.panel);
+  const hasOpen = () => entries().some(entry => entry.open());
+  function reveal() {
+    clearTimeout(hideTimer);
     bar.classList.add('is-visible');
-    bar.inert=false;
-    edge.setAttribute('aria-expanded','true');
+    bar.inert = false;
+    edge.setAttribute('aria-expanded', 'true');
   }
-  function retract(force=false){
-    if(!force && (alwaysVisible||hasOpen()||pointerOver||bar.matches(':focus-within')))return;
-    if(alwaysVisible)return;
+  function hide(force = false) {
+    if(alwaysVisible || closing) return;
+    if(!force && (hasOpen() || pointerOver || bar.matches(':focus-within'))) return;
     bar.classList.remove('is-visible');
-    bar.inert=true;
-    edge.setAttribute('aria-expanded','false');
+    bar.inert = true;
+    edge.setAttribute('aria-expanded', 'false');
   }
-  function schedule(){
-    clearTimeout(timer);
-    timer=setTimeout(()=>retract(),650);
+  function scheduleHide() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => hide(), 450);
   }
-  function releaseFocus(){
-    const active=document.activeElement;
+  function finishPending() {
+    if(!closing) return;
+    clearTimeout(closeTimer);
+    const finish = closing;
+    closing = null;
+    finish();
+  }
+  function clearFocus() {
+    const active = document.activeElement;
     active?.shadowRoot?.activeElement?.blur?.();
-    if(bar.contains?.(active)||settingsPanel.contains?.(active))active?.blur?.();
+    if(bar.contains?.(active) || settingsPanel.contains?.(active)) active?.blur?.();
     bar.querySelector('#badge')?.blur?.();
   }
-  function closePanels({except=null,hideToolbar=false}={}) {
-    clearTimeout(timer);
-    cancelPending();
-    const affected=entries().filter(entry=>entry.name!==except&&entry.isOpen());
-    if(hideToolbar){
-      suppressReveal=true;
-      pointerOver=false;
-      releaseFocus();
+  function closePanels({except, only, hideToolbar = false} = {}) {
+    clearTimeout(hideTimer);
+    if(closing) {
+      if(hideToolbar && closing.hideToolbar) return;
+      finishPending();
     }
-    if(!affected.length){
-      if(hideToolbar){
-        document.dispatchEvent(new Event('playdeck:game-interaction'));
-        retract(true);
-      }else show();
+    if(hideToolbar) {
+      blockHoverReveal = true;
+      pointerOver = false;
+      clearFocus();
+    }
+    const selected = entries().filter(entry =>
+      entry.open() && entry.name !== except && (!only || entry.name === only));
+    if(!selected.length) {
+      if(hideToolbar) hide(true);
+      else scheduleHide();
       return;
     }
-    // The open/hidden flags stay unchanged until the reverse animation finishes.
-    for(const entry of affected)entry.node.classList?.add('playdeck-closing');
-    const finish=()=>{
-      for(const entry of affected){
-        entry.node.classList?.remove('playdeck-closing');
-        entry.close();
+    for(const entry of selected) entry.panel.classList?.add('playdeck-closing');
+    const finish = () => {
+      for(const entry of selected) {
+        entry.panel.classList?.remove('playdeck-closing');
+        entry.finish();
       }
-      // The controller owns its internal visibility; notify once after all
-      // visual exits have finished (including settings-only dismissals).
-      if(hideToolbar || affected.some(entry=>entry.name==='controller'))
-        document.dispatchEvent(new Event('playdeck:game-interaction'));
-      if(hideToolbar)retract(true);
+      if(hideToolbar) {
+        clearFocus();
+        hide(true);
+      }else scheduleHide();
     };
-    finishClosing=finish;
-    closingTimer=setTimeout(()=>{
-      if(finishClosing!==finish)return;
-      finishClosing=null;
+    finish.hideToolbar = hideToolbar;
+    closing = finish;
+    closeTimer = setTimeout(() => {
+      if(closing !== finish) return;
+      closing = null;
       finish();
-    },duration());
+    }, reducedMotion() ? 0 : MENU_EXIT_MS);
   }
-  // User clicks the game, blank page, or any area outside the menu chrome.
-  function dismiss(){closePanels({hideToolbar:true});}
-  function closeOthers(name){closePanels({except:name});}
-  function track(event,doc=document){
-    if(event.pointerType==='touch'||doc.pointerLockElement)return;
-    let y=event.clientY;
-    if(doc!==document){
-      const rect=getFrame()?.getBoundingClientRect();
-      if(!rect)return;
-      y=rect.top+(y*rect.height)/(doc.defaultView.innerHeight||rect.height);
+  function show() {
+    finishPending();
+    blockHoverReveal = false;
+    reveal();
+  }
+  function dismiss() {closePanels({hideToolbar:true});}
+  function track(event, doc = document) {
+    if(event.pointerType === 'touch' || doc.pointerLockElement) return;
+    let y = event.clientY;
+    if(doc !== document) {
+      const rect = getFrame()?.getBoundingClientRect();
+      if(!rect) return;
+      y = rect.top + y * rect.height / (doc.defaultView.innerHeight || rect.height);
     }
-    if(y<innerHeight-76)suppressReveal=false;
-    if(y>=innerHeight-64 && !suppressReveal)show();
-    else if(!pointerOver)schedule();
+    if(y < innerHeight - 76) blockHoverReveal = false;
+    if(y >= innerHeight - 64 && !blockHoverReveal && !closing) reveal();
+    else if(!pointerOver) scheduleHide();
   }
-  edge.addEventListener('pointerenter',()=>{if(!suppressReveal)show();});
-  edge.addEventListener('pointerleave',schedule);
-  edge.addEventListener('click',()=>{
-    suppressReveal=false;
+  edge.addEventListener('pointerenter', () => {
+    if(!blockHoverReveal && !closing) reveal();
+  });
+  edge.addEventListener('pointerleave', scheduleHide);
+  edge.addEventListener('click', () => {
     show();
     bar.querySelector('#badge')?.focus?.();
   });
-  bar.addEventListener('pointerenter',()=>{
-    if(suppressReveal)return;
-    pointerOver=true;
+  bar.addEventListener('pointerenter', () => {
+    if(blockHoverReveal || closing) return;
+    pointerOver = true;
+    reveal();
+  });
+  bar.addEventListener('pointerleave', () => {
+    pointerOver = false;
+    scheduleHide();
+  });
+  bar.addEventListener('focusin', () => {
+    if(!closing) reveal();
+  });
+  bar.addEventListener('focusout', scheduleHide);
+  document.addEventListener('pointermove', event => track(event), {passive:true});
+  document.addEventListener('timebomb:menu-open', event => {
+    // Switching menus is allowed; finish the previous exit before opening the next.
     show();
+    closePanels({except:event.detail});
   });
-  bar.addEventListener('pointerleave',()=>{pointerOver=false;schedule();});
-  bar.addEventListener('focusin',()=>{suppressReveal=false;show();});
-  bar.addEventListener('focusout',schedule);
-  document.addEventListener('pointermove',event=>track(event),{passive:true});
-  document.addEventListener('timebomb:menu-open',event=>{
-    suppressReveal=false;
-    closeOthers(event.detail);
-  });
-  document.addEventListener('playdeck:request-close',dismiss);
-  bar.addEventListener('click',event=>{
-    const summary=event.target.closest?.('.game-menu > summary,.game-display > summary');
-    if(summary?.parentElement?.open){
-      // Prevent <details> closing its content before the exit animation runs.
+  document.addEventListener('playdeck:request-close', () => closePanels({only:'controller'}));
+  bar.addEventListener('click', event => {
+    const summary = event.target.closest?.('.game-menu > summary,.game-display > summary');
+    if(summary?.parentElement?.open) {
       event.preventDefault();
-      dismiss();
+      closePanels({only:summary.parentElement.classList.contains('game-display') ? 'display' : 'game'});
     }
-  },true);
-  document.addEventListener('pointerdown',event=>{
-    const path=event.composedPath?.()||[];
-    if(path.includes(bar)||path.includes(settingsPanel)||event.target===edge)return;
+  }, true);
+  document.addEventListener('pointerdown', event => {
+    const path = event.composedPath?.() || [];
+    if(path.includes(bar) || path.includes(settingsPanel) || event.target === edge) return;
     dismiss();
-  },true);
-  const watched=new WeakSet();
-  function attach(doc){
-    if(!doc||watched.has(doc))return;
+  }, true);
+  const watched = new WeakSet();
+  function attach(doc) {
+    if(!doc || watched.has(doc)) return;
     watched.add(doc);
-    doc.addEventListener('pointermove',event=>track(event,doc),{passive:true});
-    doc.addEventListener('pointerdown',dismiss,{passive:true,capture:true});
-    doc.addEventListener('pointerlockchange',()=>{
-      if(doc.pointerLockElement){
-        pointerOver=false;
-        dismiss();
-      }
-    },true);
+    doc.addEventListener('pointermove', event => track(event,doc), {passive:true});
+    doc.addEventListener('pointerdown', dismiss, {passive:true,capture:true});
+    doc.addEventListener('pointerlockchange', () => {
+      if(doc.pointerLockElement) dismiss();
+    }, true);
   }
-  bar.inert=true;
-  if(alwaysVisible)show();
-  return {show,attach,dismiss,closeOthers,toggleSettings(){
-    if(settingsPanel.hidden){
-      suppressReveal=false;
-      document.dispatchEvent(new CustomEvent('timebomb:menu-open',{detail:'sandbox'}));
-      settingsPanel.hidden=false;
-      bar.querySelector('#badge')?.setAttribute('aria-expanded','true');
-      show();
-    }else dismiss();
-  }};
+  // Focusing a game iframe doesn't dispatch a pointer event to its parent
+  // when the document is cross-origin. Handle that case without trapping focus.
+  if(typeof window !== 'undefined') window.addEventListener('blur', () => {
+    setTimeout(() => {
+      if(document.activeElement === getFrame?.()) dismiss();
+    },0);
+  });
+  bar.inert = true;
+  if(alwaysVisible) reveal();
+  return {
+    show, attach, dismiss,
+    closeOthers: name => closePanels({except:name}),
+    toggleSettings() {
+      if(settingsPanel.hidden) {
+        show();
+        document.dispatchEvent(new CustomEvent('timebomb:menu-open',{detail:'sandbox'}));
+        settingsPanel.hidden = false;
+        bar.querySelector('#badge')?.setAttribute('aria-expanded','true');
+      } else {
+        closePanels({only:'sandbox'});
+      }
+    }
+  };
 }

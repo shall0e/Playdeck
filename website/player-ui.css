@@ -652,30 +652,33 @@ body > #panel button {
   color: #fff !important;
 }
 
-/* The toolbar waits until menu exit finishes, then retracts independently. */
+/* Don't transform animated toolbar children: their panels use child positioning. */
 #game-menu-bar {
-  filter:blur(7px);
-  scale:.975;
-  transition:opacity 190ms ease,translate 210ms cubic-bezier(.4,0,1,1),
-    filter 190ms ease,scale 210ms ease!important
+  filter:blur(4px);
+  scale:1!important;
+  transition:opacity 190ms ease,translate 190ms ease,filter 190ms ease!important;
 }
-#game-menu-bar.is-visible,#game-menu-bar:focus-within {
-  filter:blur(0);
-  scale:1
+#game-menu-bar.is-visible {
+  filter:none;
+  opacity:1;
+  pointer-events:auto;
+  translate:0 0;
 }
-#game-menu-bar.is-visible > * {
-  animation:playdeck-toolbar-item-in 210ms cubic-bezier(.16,1,.3,1) both
+#game-menu-bar:not(.is-visible),
+#game-menu-bar:not(.is-visible):focus-within {
+  opacity:0!important;
+  pointer-events:none!important;
+  translate:0 12px!important;
+  filter:blur(4px)!important;
 }
-#game-menu-bar.is-visible > :nth-child(2){animation-delay:25ms}
-#game-menu-bar.is-visible > :nth-child(3){animation-delay:42ms}
-#game-menu-bar.is-visible > :nth-child(4){animation-delay:58ms}
-@keyframes playdeck-toolbar-item-in{
-  from{opacity:0;filter:blur(3px);translate:0 6px;scale:.96}
-  to{opacity:1;filter:blur(0);translate:0 0;scale:1}
+#game-menu-bar > * {
+  animation:none!important;
+  scale:1!important;
+  filter:none!important;
 }
-@media(prefers-reduced-motion:reduce){
-  #game-menu-bar,#game-menu-bar.is-visible > *{
-    transition:none!important;animation:none!important;
-    filter:none!important;scale:1!important
+@media(prefers-reduced-motion:reduce) {
+  #game-menu-bar {
+    transition:none!important;
+    filter:none!important;
   }
 }
