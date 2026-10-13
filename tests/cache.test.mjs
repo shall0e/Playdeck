@@ -394,3 +394,31 @@ test('raw cached launch HTML recovers automatically without redownloading game b
     assert.equal(calls.length, 1);
   }));
 
+
+test('cached game files survive launch-session changes without contacting Cloudflare', async () =>
+  fixture(async ({data,metadata,event,calls,setUpstream}) => {
+    const host='zombies.mdelworkstation.cc';
+    const base=origin+'/player/games/'+host+'/packs/zm_transit/dist/';
+    const manifest=base+'manifest.json',binary=base+'level.data';
+    const sessions=[
+      origin+'/player/games/.launch/11111111-aaaa/full/101/abc123/'+host+'/packs/zm_transit/dist/',
+      origin+'/player/games/.launch/22222222-bbbb/fast/101/abc123/'+host+'/packs/zm_transit/dist/'
+    ];
+    await data.put(manifest,new Response('{"packs":["level.data"]}',{headers:{'Content-Type':'application/json'}}));
+    await data.put(binary,new Response(new Uint8Array([1,2,3,4,5,6]),{headers:{'Content-Type':'application/octet-stream','Content-Length':'6'}}));
+    await metadata.put(binary,Response.json({bytes:6}));
+    setUpstream(()=>{throw Error('Cached assets must not contact Cloudflare');});
+    for(const session of sessions) {
+      const json=await localFetch(new Request(session+'manifest.json',{cache:'reload'}),event);
+      assert.equal(json.headers.get('X-Playdeck-Cache'),'HIT');
+      assert.deepEqual(await json.json(),{packs:['level.data']});
+      const file=await localFetch(new Request(session+'level.data',{cache:'no-store'}),event);
+      assert.equal(file.headers.get('X-Playdeck-Cache'),'HIT');
+      assert.deepEqual([...new Uint8Array(await file.arrayBuffer())],[1,2,3,4,5,6]);
+      const range=await localFetch(new Request(session+'level.data',{headers:{Range:'bytes=2-4'}}),event);
+      assert.equal(range.status,206);
+      assert.equal(range.headers.get('X-Playdeck-Cache'),'HIT');
+      assert.deepEqual([...new Uint8Array(await range.arrayBuffer())],[3,4,5]);
+    }
+    assert.equal(calls.length,0);
+  }));

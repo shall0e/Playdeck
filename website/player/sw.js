@@ -203,6 +203,13 @@ export function needsAssetRefresh(request,response){
   if(/text\/html|text\/css/i.test(type) && !transform)return true;
   return ['worker','sharedworker'].includes(request.destination) && !request.integrity && !transform?.endsWith(':'+request.destination);
 }
+// Mark device-local replies so browser DevTools can distinguish them
+// from requests to Cloudflare. No network validation occurs on these paths.
+function localCacheHit(response) {
+  const headers=new Headers(response.headers);
+  headers.set('X-Playdeck-Cache','HIT');
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
 export async function localFetch(request,eventOriginal) {
   const event={waitUntil:promise=>eventOriginal.waitUntil(promise)};
   const key=localKey(request,request.headers.has('Range'));
@@ -244,11 +251,11 @@ export async function fetchLocal(request,event) {
       let size=Number(cached.headers.get('Content-Length') || 0);
       if(!size)try{size=(await (await (await caches.open(METADATA)).match(key))?.json())?.bytes || 0;}catch{}
       const partial=await cachedRange(cached,range,request.method==='HEAD',size);
-      if(partial)return partial;
+      if(partial)return localCacheHit(partial);
     }else{
-      if(request.method==='HEAD')return new Response(null,{status:200,headers:cached.headers});
+      if(request.method==='HEAD')return localCacheHit(new Response(null,{status:200,headers:cached.headers}));
       if(context.game){const metadata=await caches.open(METADATA);event.waitUntil((async()=>{try{let info=await (await metadata.match(key))?.json() || {};if(!info.owners?.includes(context.game))await metadata.put(key,Response.json({...info,owners:[...(info.owners || []),context.game]}));}catch{}})());}
-      return routeCachedResponse(cached,request);
+      return localCacheHit(await routeCachedResponse(cached,request));
     }
   }
   const rangeKey=range?localKey(request,true):null;
@@ -259,7 +266,7 @@ export async function fetchLocal(request,event) {
       const headers=new Headers(partial.headers);
       headers.set('Content-Range',headers.get('X-Playdeck-Content-Range'));
       headers.delete('X-Playdeck-Stored-Status');headers.delete('X-Playdeck-Content-Range');
-      return new Response(request.method==='HEAD'?null:partial.body,{status:206,headers});
+      return localCacheHit(new Response(request.method==='HEAD'?null:partial.body,{status:206,headers}));
     }
   }
   try {
