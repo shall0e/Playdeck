@@ -51,10 +51,24 @@ export function recoverGameRequest(request, clientURLs) {
       try { client = new URL(candidate); } catch { continue; }
       if (original.origin !== client.origin) continue;
       const context = proxyContext(client.pathname);
-      const prefix = client.pathname.startsWith(GAME_PREFIX) ? context.prefix : client.pathname.startsWith('/__game/v4/') ? '/__game/v4/' : null;
-      if (!prefix) continue;
-      const host = client.pathname.slice(prefix.length).split('/')[0];
-      if (!host || !/^[a-z0-9.-]+$/i.test(host) || !host.includes('.')) continue;
+      let prefix = client.pathname.startsWith(GAME_PREFIX) ? context.prefix : client.pathname.startsWith('/__game/v4/') ? '/__game/v4/' : null;
+      let host = prefix ? client.pathname.slice(prefix.length).split('/')[0] : null;
+      // When a service worker restarts or storage is blocked, recover the
+      // upstream host from the initiating launcher rather than serving Pages HTML.
+      if (!prefix && client.pathname === '/player/' &&
+          original.pathname !== '/' &&
+          !original.pathname.startsWith('/player/') &&
+          !original.pathname.startsWith('/__sandbox/') &&
+          !['/games.json','/home.css','/home.js','/player-ui.css','/favicon.ico'].includes(original.pathname)) {
+        try {
+          const source = new URL(client.searchParams.get('url') || '');
+          if (source.protocol === 'https:' && !source.username && !source.password && !source.port) {
+            prefix = GAME_PREFIX;
+            host = source.hostname;
+          }
+        } catch {}
+      }
+      if (!prefix || !host || !/^[a-z0-9.-]+$/i.test(host) || !host.includes('.')) continue;
       const incoming = new URL(original);
       incoming.pathname = prefix + host + original.pathname;
       const headers = new Headers(request.headers);
