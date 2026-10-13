@@ -32,7 +32,7 @@ export function installToolbar(bar, settingsPanel, {getFrame, alwaysVisible = fa
       name: 'controller',
       panel: host.shadowRoot.querySelector('#panel'),
       open: () => !!host.shadowRoot.querySelector('#panel:not([hidden])'),
-      finish: () => document.dispatchEvent(new Event('playdeck:game-interaction'))
+      finish: () => {}
     }))
   ].filter(entry => entry.panel);
   const hasOpen = () => entries().some(entry => entry.open());
@@ -80,8 +80,10 @@ export function installToolbar(bar, settingsPanel, {getFrame, alwaysVisible = fa
     const selected = entries().filter(entry =>
       entry.open() && entry.name !== except && (!only || entry.name === only));
     if(!selected.length) {
-      if(hideToolbar) hide(true);
-      else scheduleHide();
+      if(hideToolbar) {
+        document.dispatchEvent(new Event('playdeck:game-interaction'));
+        hide(true);
+      }else scheduleHide();
       return;
     }
     for(const entry of selected) entry.panel.classList?.add('playdeck-closing');
@@ -90,6 +92,9 @@ export function installToolbar(bar, settingsPanel, {getFrame, alwaysVisible = fa
         entry.panel.classList?.remove('playdeck-closing');
         entry.finish();
       }
+      // Once per completed dismissal. Also releases controller state.
+      if(hideToolbar || selected.some(entry => entry.name === 'controller'))
+        document.dispatchEvent(new Event('playdeck:game-interaction'));
       if(hideToolbar) {
         clearFocus();
         hide(true);
