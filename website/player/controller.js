@@ -744,6 +744,7 @@ export function installController({ profileId, getFrame, forceMapping = false })
     if (value)
       document.dispatchEvent(new CustomEvent('timebomb:menu-open', { detail: 'controller' }));
     open = value;
+    document.body.classList.toggle('playdeck-controller-menu-open',value);
     $('#panel').classList.remove('playdeck-closing');
     $('#panel').hidden = !value;
     $('#toggle').setAttribute('aria-expanded', String(value));

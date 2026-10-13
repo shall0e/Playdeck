@@ -100,7 +100,9 @@ try {
     await root.locator('#badge').click();
     // Game-frame clicks should retract the open menu and then the toolbar.
     await root.locator('.game-menu > summary').click();
-    await root.frameLocator('iframe').locator('body').click({position: {x: 10, y: 10}});
+    // While the menu is active, the iframe cannot steal pointer events.
+    // Click its visible area through the outer page, which dismisses the menu.
+    await root.locator('body').click({position: {x: 10, y: 150}});
     await root.waitForTimeout(300);
     assert.equal(await root.locator('.game-menu').evaluate(el => el.open), false);
     assert.equal(await root.locator('#game-menu-bar').evaluate(el => el.classList.contains('is-visible')), false);

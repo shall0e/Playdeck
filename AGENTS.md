@@ -28,3 +28,5 @@
 - Outside clicks (both inside/outside the game iframe) must finish the panel exit before the toolbar exit, release focus, and preserve button clickability. Test both the sequence and rapid switching/reopening of menus before shipping.
 
 - Open menus MUST be hit-testable above the game iframe. Keep the toolbar stacking context above the iframe (and its child panels pointer-enabled), without CSS filters or transforms on the toolbar wrapper that break popover hit testing. Validate this with normal Playwright clicks, never force-click workarounds.
+
+- While a player menu is open, the game iframe's pointer-events are disabled by the shared open-menu CSS gate. This prevents game content from stealing clicks from popup controls. A click outside goes to the launcher and dismisses the panel; after closing completes, iframe pointer events recover automatically. Controller shadow DOM also toggles the body class for this gate.

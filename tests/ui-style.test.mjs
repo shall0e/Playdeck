@@ -47,3 +47,12 @@ test('glass buttons are filled, transparent mode remains unfilled, and anchored 
   assert.doesNotMatch(shadow,/scale:\.955/);
   assert.match(toolbar,/doc\.addEventListener\('pointerdown', dismiss/);
 });
+
+test('open menus gate iframe hit testing and restore input after close', () => {
+  const css=readFileSync(new URL('../website/player-ui.css',import.meta.url),'utf8');
+  const ctrl=readFileSync(new URL('../website/player/controller.js',import.meta.url),'utf8');
+  assert.match(css,/body:has\(#game-menu-bar \.game-menu\[open\]/);
+  assert.match(css,/body\.playdeck-controller-menu-open > iframe/);
+  assert.match(css,/pointer-events:none!important/);
+  assert.match(ctrl,/document\.body\.classList\.toggle\('playdeck-controller-menu-open',value\)/);
+});

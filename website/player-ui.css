@@ -709,3 +709,13 @@ body > #panel button {
   visibility:visible!important;
   transition:visibility 0s linear 0s,opacity 190ms ease,translate 190ms ease!important;
 }
+
+/* During overlay interaction the game is an inert pointer target, not a layer
+   allowed to intercept floating player menu controls. It becomes interactive
+   again immediately after the last panel closes (including reverse animation). */
+body:has(#game-menu-bar .game-menu[open],
+         #game-menu-bar .game-display[open],
+         #panel:not([hidden])) > iframe,
+body.playdeck-controller-menu-open > iframe {
+  pointer-events:none!important;
+}
