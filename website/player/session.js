@@ -78,3 +78,45 @@ export function recoverGameRequest(request, clientURLs) {
   } catch {}
   return request;
 }
+
+/* Controlled game frames can issue native requests directly to other HTTPS
+ * origins (WASM engines, media decoders and workers often bypass page hooks).
+ * Route those subresource requests into the same local-first game proxy. */
+export function proxyOutgoingGameRequest(request,clientURL,playerOrigin) {
+  try {
+    const target=new URL(request.url),client=new URL(clientURL),site=new URL(playerOrigin);
+    if(target.protocol!=='https:' || target.origin===site.origin ||
+       target.username || target.password || target.port ||
+       !/^[a-z0-9.-]+$/i.test(target.hostname) || !target.hostname.includes('.') ||
+       client.origin!==site.origin || !client.pathname.startsWith(GAME_PREFIX) ||
+       request.mode==='navigate')return request;
+    const context=proxyContext(client.pathname);
+    const gameHost=client.pathname.slice(context.prefix.length).split('/')[0];
+    if(!/^[a-z0-9.-]+$/i.test(gameHost) || !gameHost.includes('.'))return request;
+    const headers=new Headers(request.headers);
+    headers.set('X-Playdeck-Destination',request.destination || headers.get('X-Playdeck-Destination') || headers.get('sec-fetch-dest') || 'empty');
+    const proxied=site.origin+context.prefix+target.host+target.pathname+target.search;
+    return new Request(proxied,{
+      method:request.method,headers,
+      body:['GET','HEAD'].includes(request.method)?undefined:request.body,
+      mode:'same-origin',redirect:request.redirect,credentials:request.credentials,
+      cache:request.cache,integrity:request.integrity,signal:request.signal,
+      ...(!['GET','HEAD'].includes(request.method)?{duplex:'half'}:{})
+    });
+  }catch{return request;}
+}
+
+// A blob worker's URL does not identify its game. Only reuse a frame's route
+// when precisely one active game scope exists, never guess across two games.
+export function gameRequestClient(clientURL,frameURLs=[]) {
+  if(clientURL && !/^(?:blob:|about:|data:)/i.test(clientURL))return clientURL;
+  const matches=[];
+  for(const value of frameURLs)try{
+    const url=new URL(value),context=proxyContext(url.pathname);
+    if(!url.pathname.startsWith(GAME_PREFIX))continue;
+    const host=url.pathname.slice(context.prefix.length).split('/')[0];
+    if(!/^[a-z0-9.-]+$/i.test(host) || !host.includes('.'))continue;
+    matches.push({url:value,scope:url.origin+context.prefix+host});
+  }catch{}
+  return new Set(matches.map(item=>item.scope)).size===1?matches[0].url:clientURL;
+}
