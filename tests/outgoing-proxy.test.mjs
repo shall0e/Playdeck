@@ -9,7 +9,7 @@ const source='https://zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.
 test('direct game-origin requests use the local-first player proxy',async()=>{
   const outgoing=new Request(source,{method:'POST',body:'payload',headers:{'Content-Type':'text/plain'}});
   const routed=proxyOutgoingGameRequest(outgoing,game+'index.html',origin);
-  assert.equal(routed.url,game+'zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.json?version=2');
+  assert.equal(routed.url,game+'packs/zm_transit/dist/manifest.json?version=2');
   assert.equal(routed.method,'POST');
   assert.equal(await routed.text(),'payload');
   assert.equal(routed.headers.get('Content-Type'),'text/plain');
@@ -26,5 +26,5 @@ test('blob workers only inherit an unambiguous active game route',()=>{
   assert.equal(gameRequestClient(workerURL,[game,other]),workerURL);
   const selected=gameRequestClient(workerURL,[game]);
   assert.equal(recoverGameRequest(new Request(origin+'/packs/zm_transit/dist/manifest.json'),[selected]).url,
-    game+'zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.json');
+    game+'packs/zm_transit/dist/manifest.json');
 });
