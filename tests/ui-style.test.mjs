@@ -56,3 +56,11 @@ test('open menus gate iframe hit testing and restore input after close', () => {
   assert.match(css,/pointer-events:none!important/);
   assert.match(ctrl,/document\.body\.classList\.toggle\('playdeck-controller-menu-open',value\)/);
 });
+
+test('viewport-sized pointer-transparent toolbar lets menus receive clicks beyond button row',()=>{
+  const css=readFileSync(new URL('../website/player-ui.css',import.meta.url),'utf8');
+  assert.match(css,/width:100vw!important;max-width:none!important/);
+  assert.match(css,/height:100dvh!important/);
+  assert.match(css,/#game-menu-bar > \* \{[\s\S]*?pointer-events:auto!important/);
+  assert.match(css,/pointer-events:none!important/);
+});

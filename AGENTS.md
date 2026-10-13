@@ -30,3 +30,5 @@
 - Open menus MUST be hit-testable above the game iframe. Keep the toolbar stacking context above the iframe (and its child panels pointer-enabled), without CSS filters or transforms on the toolbar wrapper that break popover hit testing. Validate this with normal Playwright clicks, never force-click workarounds.
 
 - While a player menu is open, the game iframe's pointer-events are disabled by the shared open-menu CSS gate. This prevents game content from stealing clicks from popup controls. A click outside goes to the launcher and dismisses the panel; after closing completes, iframe pointer events recover automatically. Controller shadow DOM also toggles the body class for this gate.
+
+- The toolbar is a viewport-sized fixed flex container with `pointer-events:none` on the wrapper and `pointer-events:auto` on the menu controls/panels. This is essential: an absolutely positioned popover outside a 34 px-tall toolbar had a visual bounding box but Chrome sent clicks to the underlying iframe/page. Keep the transparent container full-screen and dock children to the bottom.
