@@ -26,3 +26,5 @@
 - Reliability over decorative motion: never animate scale, transform or filter on `#game-menu-bar > *` (toolbar controls anchor floating panels). Use only vertical translate/opacity/soft blur on the outer panel; do not force `::details-content` heights or clip native `details` controls.
 - Glass theme restores subtly filled buttons, dropdowns, and text fields using `--playdeck-control-bg` and `--playdeck-field-bg`; Transparent theme makes only those controls unfilled. Every menu and Controller shadow DOM must use the same tokens, with the outer transparent panel maintaining its 50% white border.
 - Outside clicks (both inside/outside the game iframe) must finish the panel exit before the toolbar exit, release focus, and preserve button clickability. Test both the sequence and rapid switching/reopening of menus before shipping.
+
+- Open menus MUST be hit-testable above the game iframe. Keep the toolbar stacking context above the iframe (and its child panels pointer-enabled), without CSS filters or transforms on the toolbar wrapper that break popover hit testing. Validate this with normal Playwright clicks, never force-click workarounds.

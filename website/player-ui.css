@@ -682,3 +682,19 @@ body > #panel button {
     filter:none!important;
   }
 }
+
+/* Game iframes must never intercept toolbar or open-panel clicks. Keep the
+   chrome at the top of the stacking order without transforming its children. */
+#game-menu-bar {
+  position:fixed!important;
+  z-index:2147483647!important;
+  isolation:isolate;
+  filter:none!important;
+}
+#game-menu-bar.is-visible {pointer-events:auto!important}
+#game-menu-bar .game-menu[open] > .game-menu-panel,
+#game-menu-bar .game-display[open] > .display-panel {
+  z-index:2147483647!important;
+  pointer-events:auto!important;
+}
+#game-menu-bar > * {filter:none!important}
