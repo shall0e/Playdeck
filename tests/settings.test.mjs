@@ -23,6 +23,8 @@ test('player settings reject executable or credential-bearing destinations', () 
   });
   assert.equal(value.panicURL, 'https://docs.google.com/');
   assert.equal(value.forceController, true);
+  assert.equal(validateSettings({appearance:'transparent'}).appearance, 'transparent');
+  assert.equal(validateSettings({appearance:'bad-value'}).appearance, 'glass');
   assert.equal(
     matchesBind(
       {
@@ -108,4 +110,15 @@ test('forced mapping is saved per game and does not leak into another game or gl
     if (old === undefined) delete globalThis.localStorage;
     else globalThis.localStorage = old;
   }
+});
+
+test('Glass and Transparent appearances affect all menus including controller shadow DOM', () => {
+  const css=readFileSync(new URL('../website/player/deck.css',import.meta.url),'utf8');
+  const shadow=readFileSync(new URL('../website/player/controller.js',import.meta.url),'utf8');
+  const boot=readFileSync(new URL('../website/player/boot.js',import.meta.url),'utf8');
+  assert.match(css,/:root\[data-playdeck-appearance='transparent'\]/);
+  for(const selector of ['#game-menu-bar .game-menu-panel','#game-menu-bar .display-panel','body > #panel'])
+    assert.ok(css.includes(selector));
+  assert.match(shadow,/var\(--playdeck-menu-surface/);
+  assert.match(boot,/document\.documentElement\.dataset\.playdeckAppearance = next\.appearance/);
 });
