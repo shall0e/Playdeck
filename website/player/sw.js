@@ -1,5 +1,5 @@
 import {BUILD_REVISION,FEATURE_RELEASE} from './version.js';
-import {canonicalGameURL,proxyContext,recoverGameRequest} from './session.js';
+import {canonicalGameURL,proxyContext,recoverGameRequest,proxyOutgoingGameRequest,gameRequestClient} from './session.js';
 import {staticResponse,routeCachedResponse} from './cache-policy.js';
 import {partialWriter,resumeDownload,clearPartial,clearAllPartials} from './download-store.js';
 const PREFIX='/player/games/';
@@ -323,16 +323,21 @@ if (typeof self!=='undefined' && self.addEventListener) {
     await self.clients.claim();
   })()));
   self.addEventListener('fetch',event=>{
-    const url=new URL(event.request.url);
-    if (url.origin!==self.location.origin) return;
     event.respondWith((async()=>{
-      // Native fetch references, module paths and engine loaders can bypass page hooks.
+      // Browser-native WebAssembly, media, and worker requests can bypass the
+      // page's fetch/XHR hooks. Catch outgoing traffic at the service worker.
       const client=event.clientId ? await self.clients.get(event.clientId) : null;
-      const request=recoverAssetRequest(event.request,{clientURL:client?.url,referrer:event.request.referrer,session:clientSessions.get(event.clientId)});
+      let clientURL=client?.url;
+      if(event.clientId && (!clientURL || /^(?:blob:|about:|data:)/i.test(clientURL))){
+        const frames=await self.clients.matchAll({type:'window'});
+        clientURL=gameRequestClient(clientURL,frames.map(frame=>frame.url));
+      }
+      const recovered=recoverAssetRequest(event.request,{clientURL,referrer:event.request.referrer,session:clientSessions.get(event.clientId)});
+      const request=proxyOutgoingGameRequest(recovered,clientURL,self.location.origin);
       const routed=new URL(request.url);
-      if(routed.pathname.startsWith(PREFIX))return localFetch(request,event);
-      if(routed.pathname.startsWith('/__game/v4/'))return networkFetch(request,event);
-      if(SHELL_FILES.includes(routed.pathname))return shellFetch(request,event);
+      if(routed.origin===self.location.origin && routed.pathname.startsWith(PREFIX))return localFetch(request,event);
+      if(routed.origin===self.location.origin && routed.pathname.startsWith('/__game/v4/'))return networkFetch(request,event);
+      if(routed.origin===self.location.origin && SHELL_FILES.includes(routed.pathname))return shellFetch(request,event);
       return fetch(request);
     })());
   });
