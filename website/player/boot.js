@@ -945,6 +945,7 @@ function watchGameLifecycle() {
 const mouseGuardDocs = new WeakSet();
 let mouseLockTarget = null,
   mouseLockDocument = null;
+const mouseLockOptions = new WeakMap();
 const relockButton = document.createElement('button');
 relockButton.id = 'mouse-relock';
 relockButton.type = 'button';
@@ -961,7 +962,7 @@ function requestMouseCapture() {
   if (!mouseLockTarget?.isConnected || mouseLockDocument?.pointerLockElement) return;
   try {
     mouseLockTarget.focus?.({ preventScroll: true });
-    const result = mouseLockTarget.requestPointerLock();
+    const result = mouseLockTarget.requestPointerLock(...(mouseLockOptions.get(mouseLockTarget) || []));
     result?.catch(() => {
       relockButton.textContent = 'Click game to lock mouse';
     });
@@ -974,12 +975,12 @@ function stabilizeGameMouse(doc) {
   if (!doc || mouseGuardDocs.has(doc)) return;
   mouseGuardDocs.add(doc);
   const win = doc.defaultView;
-  let discardNext = false;
   const nativeRequest = win.Element.prototype.requestPointerLock;
   if (nativeRequest) {
     win.Element.prototype.requestPointerLock = function (...args) {
       mouseLockTarget = this;
       mouseLockDocument = doc;
+      mouseLockOptions.set(this, args);
       return nativeRequest.apply(this, args);
     };
   }
@@ -989,7 +990,6 @@ function stabilizeGameMouse(doc) {
       if (doc.pointerLockElement) {
         mouseLockTarget = doc.pointerLockElement;
         mouseLockDocument = doc;
-        discardNext = true;
         relockButton.textContent = 'Lock mouse';
       }
       updateMouseLock();
@@ -997,27 +997,9 @@ function stabilizeGameMouse(doc) {
     true,
   );
   doc.addEventListener('pointerlockerror', updateMouseLock, true);
-  doc.addEventListener('click', (event) => {
-    // Only re-lock a canvas which this game previously requested to capture.
-    if (event.isTrusted && event.target === mouseLockTarget && !doc.pointerLockElement)
-      requestMouseCapture();
-  });
-  doc.addEventListener(
-    'mousemove',
-    (event) => {
-      if (!event.isTrusted || !doc.pointerLockElement) return;
-      if (discardNext) {
-        discardNext = false;
-        event.stopImmediatePropagation();
-        return;
-      }
-      if (!Number.isFinite(event.movementX) || !Number.isFinite(event.movementY)) {
-        event.stopImmediatePropagation();
-        return;
-      }
-    },
-    true,
-  );
+  // Games own their click-to-lock behavior. Issuing another request while the
+  // game's asynchronous request is pending can change options or fail capture.
+  // The explicit Lock mouse button remains available for recovery.
   for (const child of doc.querySelectorAll('iframe')) {
     const attach = () => {
       try {

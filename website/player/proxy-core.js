@@ -12,7 +12,7 @@ import {installCookieNamespace,restoreCookie} from './cookies.js';
 const LEGACY_PREFIX = '/__game/';
 const PREFIX = LEGACY_PREFIX + 'v4/';
 const LOCAL_PREFIX = '/player/games/';
-const ASSET_VERSION='deck-network-3';
+const ASSET_VERSION='deck-network-4';
 // Wrangler adds __name calls inside serialized functions when keeping names.
 // Supply the helper in the injected realm, isolated from the game's own bindings.
 const INJECTED_NAMES='const __name=(fn,name)=>{try{Object.defineProperty(fn,"name",{value:name,configurable:true});}catch{}return fn;};';
@@ -61,7 +61,42 @@ export function desktopOverrides(mapMedia,ua,mode='native') {
 }
 
 export function installPointerCompatibility() {
-  if(typeof document==='undefined' || typeof Element==='undefined' || Element.prototype.requestPointerLock)return;
+  if(typeof document==='undefined' || typeof Element==='undefined' || globalThis.__playdeckPointerInstalled)return;
+  globalThis.__playdeckPointerInstalled=true;
+  const native=Element.prototype.requestPointerLock;
+  if(native) {
+    let rawSupported=true;
+    Element.prototype.requestPointerLock=function(options) {
+      // Prefer unaccelerated motion without overriding an explicit game choice.
+      const requested={...options};
+      if(requested.unadjustedMovement===undefined)requested.unadjustedMovement=rawSupported;
+      const retry=error=>{
+        if(error?.name!=='NotSupportedError' || !requested.unadjustedMovement)throw error;
+        rawSupported=false;
+        return native.call(this,{...requested,unadjustedMovement:false});
+      };
+      try {
+        const result=native.call(this,requested);
+        return result?.catch ? result.catch(retry) : result;
+      } catch(error) {return retry(error);}
+    };
+  }
+  const surface=document.defaultView || document;
+  const pending=new Set();
+  const reset=()=>{pending.add('mousemove');pending.add('pointermove');};
+  document.addEventListener('pointerlockchange',reset,true);
+  surface.addEventListener('blur',reset,true);
+  surface.addEventListener('focus',reset,true);
+  document.addEventListener('visibilitychange',reset,true);
+  for(const type of ['mousemove','pointermove'])surface.addEventListener(type,event=>{
+    if(!event.isTrusted || (type==='pointermove' && event.pointerType && event.pointerType!=='mouse'))return;
+    const transition=pending.delete(type);
+    if(!transition && Number.isFinite(event.movementX) && Number.isFinite(event.movementY))return;
+    // Preserve the original event, position and button state, and zero only
+    // discontinuous relative motion. Never clamp legitimate rapid turns.
+    for(const key of ['movementX','movementY'])try{Object.defineProperty(event,key,{value:0,configurable:true});}catch{}
+  },true);
+  if(native)return;
   let target=null;
   const change=()=>document.dispatchEvent(new Event('pointerlockchange'));
   // Capture is virtual: controller mapping can send relative motion on browsers
