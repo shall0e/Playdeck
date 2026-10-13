@@ -396,7 +396,7 @@ if (typeof self!=='undefined' && self.addEventListener) {
       let clientURL=client?.url;
       if(!clientURL || /^(?:blob:|about:|data:)/i.test(clientURL)){
         const frames=await self.clients.matchAll({type:'window'});
-        clientURL=gameRequestClient(clientURL,frames.map(frame=>frame.url));
+        clientURL=gameRequestClient(clientURL,frames.map(frame=>frame.url),event.request.mode);
       }
       const recovered=recoverAssetRequest(event.request,{clientURL,referrer:event.request.referrer,session:clientSessions.get(event.clientId)});
       const request=proxyOutgoingGameRequest(recovered,clientURL,self.location.origin);

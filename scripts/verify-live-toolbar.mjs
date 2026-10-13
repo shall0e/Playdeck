@@ -67,6 +67,7 @@ try {
     await assertIcon(root, '#toggle', 'gamepad-2');
     await root.locator('#toggle').click();
     await root.locator('#badge').click();
+    await root.locator('body > #panel .deck-section > summary').filter({hasText:'Compatibility'}).click();
     await root.locator('#performance-control select').waitFor({ state: 'visible' });
     assert.equal(await root.locator('#performance-control select option').count(), 4);
     await root.locator('#badge').click();

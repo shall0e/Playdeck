@@ -48,6 +48,8 @@ export function telemetryChannel(context,source) {
 export function recoverGameRequest(request, clientURLs) {
   try {
     const original = new URL(request.url);
+    // Player navigations must never inherit an existing game's upstream host.
+    if (original.pathname === '/player/' || original.pathname === '/') return request;
     if (original.pathname.startsWith(GAME_PREFIX) || original.pathname.startsWith('/__game/')) return request;
     const candidates = Array.isArray(clientURLs) ? clientURLs : [clientURLs];
     for (const candidate of candidates) {
@@ -114,8 +116,10 @@ export function proxyOutgoingGameRequest(request,clientURL,playerOrigin) {
 
 // A blob worker's URL does not identify its game. Only reuse a frame's route
 // when precisely one active game scope exists, never guess across two games.
-export function gameRequestClient(clientURL,frameURLs=[]) {
+export function gameRequestClient(clientURL,frameURLs=[],requestMode='') {
   if(clientURL && !/^(?:blob:|about:|data:)/i.test(clientURL))return clientURL;
+  // New tabs have no initiating client. An unrelated open game is not their owner.
+  if(requestMode==='navigate')return clientURL;
   const matches=[];
   for(const value of frameURLs)try{
     const url=new URL(value),context=proxyContext(url.pathname);

@@ -6,6 +6,16 @@ const origin='https://playdeck-1z1.pages.dev';
 const game=origin+'/player/games/.launch/12345678-abcd/full/101/gameid/zombies.mdelworkstation.cc/';
 const source='https://zombies.mdelworkstation.cc/packs/zm_transit/dist/manifest.json?version=2';
 
+test('new player navigations cannot inherit another open game',()=>{
+  assert.equal(gameRequestClient(undefined,[game],'navigate'),undefined);
+  const launcher=new Request(origin+'/player/?url=https%3A%2F%2Fother.example%2F');
+  assert.equal(recoverGameRequest(launcher,[game]),launcher);
+  const home=new Request(origin+'/');
+  assert.equal(recoverGameRequest(home,[game]),home);
+  // A known game client still resolves its own native resource requests.
+  assert.equal(gameRequestClient(game,[game],'navigate'),game);
+});
+
 test('direct game-origin requests use the local-first player proxy',async()=>{
   const outgoing=new Request(source,{method:'POST',body:'payload',headers:{'Content-Type':'text/plain'}});
   const routed=proxyOutgoingGameRequest(outgoing,game+'index.html',origin);
