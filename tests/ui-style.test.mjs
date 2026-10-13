@@ -18,3 +18,17 @@ test('every Playdeck menu shares an unfilled compact control system', () => {
   assert.match(controller,/background:transparent!important/);
   assert.match(agents,/one change applies everywhere/i);
 });
+test('settings categories own their existing controls without breaking saved values',()=>{
+  const settings=readFileSync(new URL('../website/player/settings.js',import.meta.url),'utf8');
+  const deck=readFileSync(new URL('../website/player/deck.js',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../website/player/deck.css',import.meta.url),'utf8');
+  const controller=readFileSync(new URL('../website/player/controller.js',import.meta.url),'utf8');
+  assert.match(settings,/<details class="deck-section" data-misc-settings><summary>Misc<\/summary>/);
+  assert.match(settings,/const forceControl = form.querySelector/);
+  assert.match(deck,/compatibility.append\(forceMappingRow\)/);
+  assert.match(deck,/\['\.download-row','#storage-note','#clear'\]/);
+  assert.match(css,/--playdeck-menu-border: 1px solid rgba\(255,255,255,\.50\)/);
+  assert.match(css,/#toolbar-edge::after \{display:none!important\}/);
+  assert.match(css,/scrollbar-gutter:auto!important/);
+  assert.match(controller,/#panel #keybind-options > summary::after \{content:none!important/);
+});

@@ -33,11 +33,19 @@ export function installDeck(api){
   function actions(parent,items){const row=document.createElement('div');row.className='deck-actions';for(const [label,action]of items)row.append(button(label,run(action)));parent.append(row);return row;}
 
   const compatibility=section('Compatibility');
+  const forceMappingRow=panel.querySelector('[data-force-row]');
+  if(forceMappingRow)compatibility.append(forceMappingRow);
   for(const [key,label]of [['desktop','Desktop identity'],['textures','Compressed texture fallback']]){const field=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.checked=profile.compatibility[key];input.onchange=run(async()=>{save({...profile,compatibility:{...profile.compatibility,[key]:input.checked}});api.reload();});field.append(document.createTextNode(label),input);compatibility.append(field);}
   const compatNote=document.createElement('p');compatNote.textContent='Changes restart the game. Graphics quality remains controlled by Performance.';compatibility.append(compatNote);
   actions(compatibility,[['Disable page cleanup',async()=>{save({...profile,hidePageExtras:false});const url=new URL(location.href);url.searchParams.set('hidePageExtras','false');location.assign(url.href);}],['Source defaults',async()=>{save({...profile,compatibility:{desktop:false,identity:false,textures:false},performance:'native',hidePageExtras:false});const url=new URL(location.href);url.searchParams.set('performance','native');url.searchParams.set('hidePageExtras','false');location.assign(url.href);}],[ 'Reset game settings',async()=>{if(gameURL)resetProfile(gameURL);const url=new URL(location.href);for(const key of ['performance','ratio','forceController','hidePageExtras'])url.searchParams.delete(key);location.assign(url.href);}],[ 'Run online once',async()=>api.reload({online:true})]]);
 
   const downloads=section('Downloads');
+  // Keep the original controls and IDs so the loader, cache statistics,
+  // clear handlers, and local download status continue to work unchanged.
+  for(const control of ['.download-row','#storage-note','#clear']){
+    const node=panel.querySelector(control);
+    if(node)downloads.append(node);
+  }
   const downloadNote=document.createElement('p');downloadNote.id='deck-download-status';downloadNote.textContent='Files are stored as the game requests them. Later levels and online features may still need internet.';downloads.append(downloadNote);
   const quota=document.createElement('p');downloads.append(quota);
   const fileList=document.createElement('div');fileList.className='deck-files';downloads.append(fileList);

@@ -611,6 +611,30 @@ export function installController({ profileId, getFrame, forceMapping = false })
         border:0!important;padding:5px!important}
       #panel option:is(:hover,:focus,:checked){background:transparent!important;color:#fff!important}
     }
+    /* Shared Settings section style: compact, plain heading, no +/- marker. */
+    #panel #keybind-options {
+      margin:4px 0!important;padding:2px 0!important;
+      border:0!important;border-radius:0!important;
+      outline:0!important;box-shadow:none!important;
+      background:transparent!important
+    }
+    #panel #keybind-options > summary {
+      display:flex!important;align-items:center!important;
+      list-style:none!important;
+      min-height:26px!important;padding:6px 2px!important;
+      font:500 12px/1.4 var(--player-font,system-ui,sans-serif)!important;
+      background:transparent!important;
+      border:0!important;outline:0!important;box-shadow:none!important;
+      caret-color:transparent!important;user-select:none
+    }
+    #panel #keybind-options > summary::after {content:none!important;display:none!important}
+    #panel #keybind-options > summary::marker {content:""!important}
+    #panel #keybind-options > summary::-webkit-details-marker {display:none!important}
+    #panel :is(summary,button,label) {caret-color:transparent!important;user-select:none}
+    #panel :is(summary,button,select,input):is(:focus,:focus-visible) {
+      outline:0!important;box-shadow:none!important
+    }
+    #panel {scrollbar-width:none!important;scrollbar-gutter:auto!important;overflow-x:hidden!important}
     @media(prefers-reduced-motion:reduce){#panel :is(button,input,select,summary),#toggle{transition:none!important}}
   </style><button id="toggle" type="button" aria-expanded="false" aria-pressed="false">${iconMarkup('gamepad-2')}<span>Controller</span></button>
   <section id="panel" hidden aria-label="Controller settings"><header><h2>Controller mapping</h2></header>

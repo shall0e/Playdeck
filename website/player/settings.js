@@ -97,8 +97,11 @@ export function installSettings(
   const form = document.createElement('form');
   form.id = 'player-settings';
   form.innerHTML =
-    '<h2>Settings</h2><label>Menu appearance<select name="appearance" aria-label="Menu appearance"><option value="glass">Glass</option><option value="transparent">Transparent</option></select></label><label class="check-row" data-force-row><input name="forceController" type="checkbox">Force controller mapping</label><label class="shortcut-row">Panic key<input name="panicKey" readonly aria-label="Panic shortcut" title="Click and press a shortcut"></label><label>Panic destination<input name="panicURL" type="url" required aria-label="Panic destination"></label><p data-settings-status role="status"></p>';
-  const field = (name) => form.elements.namedItem(name),
+    '<h2>Settings</h2><label>Menu appearance<select name="appearance" aria-label="Menu appearance"><option value="glass">Glass</option><option value="transparent">Transparent</option></select></label><label class="check-row" data-force-row><input name="forceController" type="checkbox">Force controller mapping</label><details class="deck-section" data-misc-settings><summary>Misc</summary><label class="shortcut-row">Panic key<input name="panicKey" readonly aria-label="Panic shortcut" title="Click and press a shortcut"></label><label>Panic destination<input name="panicURL" type="url" required aria-label="Panic destination"></label></details><p data-settings-status role="status"></p>';
+  // The compatibility toggle is moved into the shared Compatibility section.
+  // Keep the original element reference so auto-save works outside this form.
+  const forceControl = form.querySelector('[name="forceController"]');
+  const field = (name) => name === 'forceController' ? forceControl : form.elements.namedItem(name),
     status = form.querySelector('[data-settings-status]');
   form.querySelector('[data-force-row]').hidden = nativeGamepad || !gameURL;
   field('appearance').value = settings.appearance || 'glass';

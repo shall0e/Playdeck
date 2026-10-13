@@ -8,7 +8,9 @@
 - Controls have permanently transparent backgrounds in default, hover, focus, active, checked, disabled, and open states. Give hover/focus feedback with a slight text/icon color or text-glow transition (roughly 120 ms), NOT a filled rectangle or white line.
 - Dropdowns must match the dark UI. Use `appearance: base-select` and `::picker(select)` where supported; keep native semantic select behavior and readable fallbacks.
 - Use narrow (~258 px) menus, compact typography (~11-13 px), tight vertical rhythm, and condensed Controller keybind rows (~24 px). Do not sacrifice readability or pointer targets on small screens.
-- The only user-requested white stroke is the outer transparent menu border. Do not add an outline to inputs or checkboxes.
+- The only user-requested white stroke is the outer transparent menu border, at 50% white opacity. Do not add an outline to inputs or checkboxes, the toolbar edge activator, or section summaries. Suppress caret-like focus indicators on non-editable controls and hide scrollbars without reserving a layout gutter.
+- Settings content belongs in logical collapsible sections: panic shortcut and destination in Misc, game-specific force-controller mapping in Compatibility, cache counts, clearing and management under Downloads. Keep the underlying input references and event handlers intact when moving their DOM nodes.
+- Controller Advanced settings uses exactly the same summary typography, spacing, and no-marker / no-outline treatment as Misc, Compatibility, Downloads and Saves.
 - Clicking inside the game iframe must dismiss all player menus, including Controller and Settings, release toolbar focus and return input to the game.
 
 ## Functionality

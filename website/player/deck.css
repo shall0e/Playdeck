@@ -16,7 +16,7 @@
   --playdeck-menu-surface: transparent;
   --playdeck-menu-blur: none;
   --playdeck-menu-shadow: none;
-  --playdeck-menu-border: 1px solid rgba(255,255,255,.88);
+  --playdeck-menu-border: 1px solid rgba(255,255,255,.50);
 }
 
 /* Only the OUTER panels can have a background or border. */
@@ -187,3 +187,48 @@ body input:is([type=checkbox],[type=radio]):focus-visible {
 @media(prefers-reduced-motion:reduce) {
   body button,body select,body input,#game-menu-bar summary,#panel summary {transition:none!important}
 }
+
+/* Never draw blinking carets or focus lines on menu chrome or edge hotzones. */
+#toolbar-edge,
+#toolbar-edge:focus,
+#toolbar-edge:focus-visible {
+  outline:0!important;border:0!important;box-shadow:none!important;
+  caret-color:transparent!important
+}
+#toolbar-edge::after {display:none!important}
+#game-menu-bar,body > #panel,#tv-cast,.deck-modal {
+  scrollbar-width:none!important;
+  scrollbar-gutter:auto!important;
+  overflow-x:hidden!important;
+}
+#game-menu-bar :is(summary,button,label),
+body > #panel :is(summary,button,label),
+#tv-cast :is(summary,button,label),
+.deck-modal :is(summary,button,label) {
+  user-select:none;
+  caret-color:transparent!important;
+}
+#game-menu-bar :is(summary,button,select):is(:focus,:focus-visible),
+body > #panel :is(summary,button,select,input,textarea):is(:focus,:focus-visible),
+#tv-cast :is(summary,button,select):is(:focus,:focus-visible) {
+  outline:none!important;outline-offset:0!important;
+  box-shadow:none!important
+}
+/* Match Controller Advanced and Settings Misc to other plain section headings. */
+#panel .deck-section > summary,
+#panel .deck-section details > summary {
+  display:flex!important;align-items:center!important;
+  list-style:none!important;font-weight:500!important;
+  min-height:26px!important;
+  padding:6px 2px!important;
+  border:0!important;outline:0!important;
+  background:transparent!important;box-shadow:none!important;
+}
+#panel .deck-section summary::marker {content:""!important}
+#panel .deck-section summary::-webkit-details-marker {display:none!important}
+#panel .deck-section summary::after {content:none!important}
+#player-settings [data-misc-settings] {margin:4px 0!important}
+#player-settings [data-misc-settings] label {display:flex;align-items:center;justify-content:space-between;gap:8px!important;margin:7px 0!important}
+#player-settings [data-misc-settings] input {min-width:0;max-width:130px}
+#panel [data-force-row] {display:flex;justify-content:space-between;align-items:center}
+#panel [data-force-row][hidden] {display:none!important}
