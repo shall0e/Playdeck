@@ -637,22 +637,22 @@ export function installController({ profileId, getFrame, forceMapping = false })
     #panel {scrollbar-width:none!important;scrollbar-gutter:auto!important;overflow-x:hidden!important}
     @media(prefers-reduced-motion:reduce){#panel :is(button,input,select,summary),#toggle{transition:none!important}}
 
-    /* Match the shared theme. Glass has filled controls; Transparent does not. */
+    /* Match shared unfilled controls in both outer-panel themes. */
     #toggle,#panel :is(button,summary) {
-      background:var(--playdeck-control-bg,rgba(255,255,255,.095))!important;
-      transition:background-color 130ms ease,color 130ms ease!important
+      background:var(--playdeck-control-bg,transparent)!important;
+      transition:color 120ms ease,opacity 120ms ease,text-shadow 120ms ease!important
     }
     #toggle:hover,#panel :is(button,summary):hover {
-      background:var(--playdeck-control-hover-bg,rgba(255,255,255,.16))!important
+      background:var(--playdeck-control-hover-bg,transparent)!important
     }
     #toggle[aria-expanded=true]{
-      background:var(--playdeck-control-active-bg,rgba(255,255,255,.21))!important
+      background:var(--playdeck-control-active-bg,transparent)!important
     }
     #panel :is(select,input:not([type=checkbox]):not([type=range]),textarea) {
-      background:var(--playdeck-field-bg,rgba(255,255,255,.075))!important
+      background:var(--playdeck-field-bg,transparent)!important
     }
     #panel :is(select,input:not([type=checkbox]):not([type=range]),textarea):hover {
-      background:var(--playdeck-control-hover-bg,rgba(255,255,255,.16))!important
+      background:var(--playdeck-control-hover-bg,transparent)!important
     }
     #panel:not([hidden]) {animation:playdeck-panel-enter 180ms ease-out both}
     #panel.playdeck-closing {animation:playdeck-panel-exit 210ms ease-in both;pointer-events:none}

@@ -24,7 +24,7 @@
 - Preserve reduced-motion preferences: skip animation AND JS waiting time when `prefers-reduced-motion: reduce` is active. Outside-click retraction must clear toolbar focus and avoid immediate re-reveal until the cursor leaves the bottom activation zone.
 
 - Reliability over decorative motion: never animate scale, transform or filter on `#game-menu-bar > *` (toolbar controls anchor floating panels). Use only vertical translate/opacity/soft blur on the outer panel; do not force `::details-content` heights or clip native `details` controls.
-- Glass theme restores subtly filled buttons, dropdowns, and text fields using `--playdeck-control-bg` and `--playdeck-field-bg`; Transparent theme makes only those controls unfilled. Every menu and Controller shadow DOM must use the same tokens, with the outer transparent panel maintaining its 50% white border.
+- Both Glass and Transparent keep buttons, dropdowns, and text fields permanently unfilled using the shared transparent control tokens. Appearance changes only the outer panel; Controller shadow DOM mirrors those tokens, with the outer transparent panel maintaining its 50% white border.
 - Outside clicks (both inside/outside the game iframe) must finish the panel exit before the toolbar exit, release focus, and preserve button clickability. Test both the sequence and rapid switching/reopening of menus before shipping.
 
 - Open menus MUST be hit-testable above the game iframe. Keep the toolbar stacking context above the iframe (and its child panels pointer-enabled), without CSS filters or transforms on the toolbar wrapper that break popover hit testing. Validate this with normal Playwright clicks, never force-click workarounds.
@@ -33,6 +33,6 @@
 
 - The toolbar is a viewport-sized fixed flex container with `pointer-events:none` on the wrapper and `pointer-events:auto` on the menu controls/panels. This is essential: an absolutely positioned popover outside a 34 px-tall toolbar had a visual bounding box but Chrome sent clicks to the underlying iframe/page. Keep the transparent container full-screen and dock children to the bottom.
 
-- Apply a mode-specific `:root[data-playdeck-appearance='transparent']` override for buttons, summaries, dropdowns and fields across Game, Settings, Display and dialogs. This must outrank legacy `!important` controls, not merely set variables that a stronger rule could ignore. Glass uses filled shared tokens.
+- Apply a mode-specific `:root[data-playdeck-appearance='transparent']` override for buttons, summaries, dropdowns and fields across Game, Settings, Display and dialogs. This must outrank legacy `!important` controls, not merely set variables that a stronger rule could ignore. Glass uses the same unfilled controls; only its outer panel is filled.
 
 - Every deployed player HTML build must attach the current GitHub revision as a query string to both `/player-ui.css` and `/player/deck.css`. Do not reintroduce static style URLs: an HTML/JS deployment with cached old CSS breaks the menu appearance and interactivity.

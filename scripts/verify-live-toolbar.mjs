@@ -88,7 +88,7 @@ try {
     await root.locator('#tv-cast button[aria-label="Close"]').click();
     console.log('Player stylesheet URLs',JSON.stringify(await root.locator('html').evaluate(() =>
       Array.from(document.querySelectorAll('link[rel="stylesheet"]'),el=>el.href))));
-    // Original Glass controls must have filled backgrounds; Transparent must not.
+    // Controls remain unfilled in both outer-panel appearances.
     await root.locator('#badge').click();
     const appearance = root.locator('#player-settings select[name="appearance"]');
     await appearance.selectOption('glass');
@@ -100,8 +100,9 @@ try {
       background:getComputedStyle(el).backgroundColor
     }))));
     const glass = await button.evaluate(el => getComputedStyle(el).backgroundColor);
-    const glassAlpha = Number(glass.slice(glass.lastIndexOf(',')+1).replace(')','').trim());
-    assert(glassAlpha > 0, 'Glass buttons remain transparent: ' + glass);
+    assert.equal(glass, 'rgba(0, 0, 0, 0)', 'Glass Settings buttons have a fill');
+    assert.equal(await controllerToggle.evaluate(el => getComputedStyle(el).backgroundColor),
+      'rgba(0, 0, 0, 0)', 'Glass Controller toolbar button has a fill');
     await appearance.selectOption('transparent');
     await root.waitForTimeout(180);
     console.log('Appearance selection', JSON.stringify(await root.locator('html').evaluate(html => ({
