@@ -27,7 +27,7 @@ export function installToolbar(bar,settingsPanel,{getFrame,alwaysVisible=false})
       name:'controller',
       node:host.shadowRoot.querySelector('#panel'),
       isOpen:()=>!!host.shadowRoot.querySelector('#panel:not([hidden])'),
-      close:()=>document.dispatchEvent(new Event('playdeck:game-interaction'))
+      close:()=>{}
     }))
   ].filter(entry=>entry.node);
   const hasOpen=()=>entries().some(entry=>entry.isOpen());
@@ -69,8 +69,10 @@ export function installToolbar(bar,settingsPanel,{getFrame,alwaysVisible=false})
       releaseFocus();
     }
     if(!affected.length){
-      if(hideToolbar)retract(true);
-      else show();
+      if(hideToolbar){
+        document.dispatchEvent(new Event('playdeck:game-interaction'));
+        retract(true);
+      }else show();
       return;
     }
     // The open/hidden flags stay unchanged until the reverse animation finishes.
@@ -80,6 +82,10 @@ export function installToolbar(bar,settingsPanel,{getFrame,alwaysVisible=false})
         entry.node.classList?.remove('playdeck-closing');
         entry.close();
       }
+      // The controller owns its internal visibility; notify once after all
+      // visual exits have finished (including settings-only dismissals).
+      if(hideToolbar || affected.some(entry=>entry.name==='controller'))
+        document.dispatchEvent(new Event('playdeck:game-interaction'));
       if(hideToolbar)retract(true);
     };
     finishClosing=finish;
