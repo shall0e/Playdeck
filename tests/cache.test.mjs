@@ -4,6 +4,7 @@ import {needsAssetRefresh} from '../website/player/sw.js';
 import {
   localFetch,
   cacheAsset,
+  hasDownloadSpace,
   MAX_CACHE_BYTES,
   cachedRange,
   shellFetch,
@@ -465,3 +466,13 @@ test('truncated asset bodies are never left in the local cache', async () =>
     await finish();
     assert.equal(calls.length,2);
   }));
+
+ test('download admission reserves storage for saves and duplicate resume data', async () => {
+  const mb=1024*1024;
+  const file=new Response('data',{headers:{'Content-Length':String(100*mb)}});
+  assert.equal(await hasDownloadSpace(file,{estimate:async()=>({quota:200*mb,usage:150*mb})}),false);
+  assert.equal(await hasDownloadSpace(file,{estimate:async()=>({quota:200*mb,usage:50*mb})}),true);
+  const resume=new Response('data',{headers:{'Content-Length':String(32*mb),'Accept-Ranges':'bytes',ETag:'v1'}});
+  assert.equal(await hasDownloadSpace(resume,{estimate:async()=>({quota:100*mb,usage:25*mb})}),false);
+  assert.equal(await hasDownloadSpace(file,{estimate:async()=>{throw Error('Blocked');}}),true);
+});

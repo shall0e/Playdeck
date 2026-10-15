@@ -203,6 +203,18 @@ async function inform(message) {
     if (new URL(client.url).pathname==='/player/' && (!message.session || clientSessions.get(client.id)?.session===message.session)) client.postMessage(message);
   }
 }
+export async function hasDownloadSpace(response,storage=globalThis.navigator?.storage) {
+  try {
+    const {quota,usage}=await storage?.estimate?.() || {};
+    if(!(quota>0) || !Number.isFinite(usage))return true;
+    const size=Number(response.headers.get('Content-Length')) || 0;
+    // Leave room for saves and metadata. Resumable files also have an IDB copy.
+    const resumable=size>8*1024*1024 && size<=32*1024*1024 &&
+      response.headers.get('Accept-Ranges')==='bytes' &&
+      (response.headers.has('ETag') || response.headers.has('X-Playdeck-Source-ETag') || response.headers.has('Last-Modified'));
+    return quota-usage>Math.max(64*1024*1024,size*(resumable?2:1)+16*1024*1024);
+  } catch {return true;}
+}
 export function cacheAsset(cache,key,response,event,metadata) {
   if(!canStore(key,response) || !response.body)return response;
   // One reader feeds disk and the game with backpressure. Response.clone() on a
@@ -344,6 +356,10 @@ export async function fetchLocal(request,event) {
     if(forceNetwork && response.status===304 && cached)return routeCachedResponse(cached,request);
     if(sessionOptions.get(context.session)?.online)return response;
     if(!response.ok && response.status!==206)event.waitUntil(inform({type:'sandbox:request-error',session:context.session,url:request.url,status:response.status,contentType:response.headers.get('Content-Type')}));
+    if(!await hasDownloadSpace(response)) {
+      event.waitUntil(inform({type:'sandbox:storage-error',session:context.session,message:'Storage is nearly full. New files will stream without being downloaded. Clear downloads to free space; saves are kept.'}));
+      return routeCachedResponse(response,request);
+    }
     let metadata;try{metadata=await caches.open(METADATA);}catch{}
     if(rangeKey && request.method==='GET' && response.status===206){
       // CacheStorage rejects 206 entries. Store the complete requested range

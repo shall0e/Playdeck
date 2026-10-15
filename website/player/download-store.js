@@ -18,12 +18,13 @@ export async function clearAllPartials(){try{const db=await open();if(!db)return
 
 export function partialWriter(url,response) {
   const total=Number(response.headers.get('Content-Length')),validator=response.headers.get('ETag') || response.headers.get('X-Playdeck-Source-ETag') || response.headers.get('Last-Modified');
-  if(!globalThis.indexedDB || !(total>8*CHUNK) || !validator || response.headers.get('Accept-Ranges')!=='bytes' || /html|css|javascript|json/i.test(response.headers.get('Content-Type') || ''))return null;
+  if(!globalThis.indexedDB || !(total>8*CHUNK && total<=32*CHUNK) || !validator || response.headers.get('Accept-Ranges')!=='bytes' || /html|css|javascript|json/i.test(response.headers.get('Content-Type') || ''))return null;
+  // Bound duplicate disk usage while Cache Storage receives the same stream.
   let offset=0,parts=[],bytes=0,available=true;
   async function flush() {
     if(!available || !bytes)return;
     const blob=new Blob(parts),start=offset;parts=[];bytes=0;
-    try{await operation('chunks','readwrite',store=>store.put({url,offset:start,blob}));offset+=blob.size;await operation('meta','readwrite',store=>store.put({url,bytes:offset,total,validator,headers:[...response.headers]}));}catch{available=false;}
+    try{await operation('chunks','readwrite',store=>store.put({url,offset:start,blob}));offset+=blob.size;await operation('meta','readwrite',store=>store.put({url,bytes:offset,total,validator,headers:[...response.headers]}));}catch{available=false;parts=[];bytes=0;await clearPartial(url);}
   }
   return {async write(value){if(!available)return;parts.push(value.slice());bytes+=value.byteLength;if(bytes>=CHUNK)await flush();},async finish(){await clearPartial(url);},async interrupt(){await flush();}};
 }
