@@ -41,8 +41,25 @@ export function installNetworkProxy(base, origin, prefix, workerPrelude, resolve
       return addModule.call(this,map(url),...options);
     };
   }
+  // Engines with OPFS downloaders already persist their pack bytes. Let the
+  // service worker reuse existing hits, but avoid writing a second disk copy.
+  let managesFiles=false;
+  const storage=globalThis.navigator?.storage;
+  if(storage?.getDirectory)try {
+    const getDirectory=storage.getDirectory.bind(storage);
+    storage.getDirectory=async(...args)=>{const directory=await getDirectory(...args);managesFiles=true;return directory;};
+  } catch {}
   const nativeFetch = globalThis.fetch.bind(globalThis);
-  globalThis.fetch = (input, options) => nativeFetch(input instanceof Request ? new Request(map(input.url), input) : map(input), options);
+  globalThis.fetch = (input, options) => {
+    const mapped=input instanceof Request ? new Request(map(input.url), input) : map(input);
+    const address=typeof mapped==='string'?mapped:mapped.url;
+    if(managesFiles && typeof address==='string' && address.startsWith(origin+prefix)) {
+      const headers=new Headers(options?.headers ?? (mapped instanceof Request?mapped.headers:undefined));
+      headers.set('X-Playdeck-Storage-Managed','1');
+      options={...options,headers};
+    }
+    return nativeFetch(mapped,options);
+  };
   if (typeof XMLHttpRequest !== 'undefined') {
     const nativeOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url, ...args) { return nativeOpen.call(this, method, map(url), ...args); };

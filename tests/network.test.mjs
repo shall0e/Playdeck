@@ -122,7 +122,7 @@ test('navigation destinations are mapped without rewriting game data or shadowed
 test('existing cached documents get new network hooks locally without changing saved game bytes',async()=>{
   const request=new Request(origin+prefix+'game.example/index.html');
   const response=await routeCachedResponse(new Response('<html><head></head><body>saved</body></html>',{headers:{'Content-Type':'text/html','X-Playdeck-Compatibility':'deck-runtime-1'}}),request);
-  const text=await response.text();assert(text.includes('installNetworkProxy'));assert.equal(response.headers.get('X-Playdeck-Network'),'deck-network-7');
+  const text=await response.text();assert(text.includes('installNetworkProxy'));assert.equal(response.headers.get('X-Playdeck-Network'),'deck-network-8');
   const binary=new Response(new Uint8Array([1,2,3]));assert.equal(await routeCachedResponse(binary,request),binary);
 });
 import {rewriteImportMap} from '../website/player/rewrite.js';
@@ -142,4 +142,21 @@ test('deployment bundling keeps nested worker hooks self-contained',async()=>{
   const calls=[],child=vm.createContext({URL:URLs,Request,Blob,fetch:url=>{calls.push(url);return Promise.resolve(new Response('ok'));}});
   vm.runInContext(await blobs.get(instance.url).text(),child);
   assert.equal(calls[0],origin+prefix+'cdn.example/bundled.bin');
+});
+
+test('OPFS downloaders mark subsequent fetches without losing request options', async()=>{
+  const calls=[],directory={};
+  const realm=vm.createContext({URL,Request,Headers,navigator:{storage:{getDirectory:async()=>directory}},fetch:async(...args)=>{calls.push(args);return new Response('ok');}});
+  vm.runInContext(bootstrap(base,origin,true,prefix),realm);
+  await realm.fetch('data.bin');
+  assert.equal(calls[0][1],undefined);
+  assert.equal(await realm.navigator.storage.getDirectory(),directory);
+  const abort=new AbortController();
+  await realm.fetch(new Request(base,{headers:{Range:'bytes=4-'}}),{signal:abort.signal,cache:'no-store'});
+  const [request,options]=calls[1];
+  assert.equal(request.url,origin+prefix+'game.example/folder/index.html');
+  assert.equal(options.headers.get('X-Playdeck-Storage-Managed'),'1');
+  assert.equal(options.headers.get('Range'),'bytes=4-');
+  assert.equal(options.signal,abort.signal);
+  assert.equal(options.cache,'no-store');
 });

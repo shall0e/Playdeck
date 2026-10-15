@@ -103,7 +103,7 @@ test('a session repairs cached raw HTML once without redownloading saved game da
     const launched = origin + '/player/games/.launch/12345678-abcd/full/101/gameid/game.example/index.html';
     await data.put(canonical, new Response('broken raw HTML', {headers:{'Content-Type':'text/html'}}));
     await data.put(url, new Response('saved binary'));
-    setUpstream(async () => new Response('repaired HTML', {headers:{'Content-Type':'text/html','X-Playdeck-Transform':'deck-network-7:runtime-1:asset','X-Playdeck-Network':'deck-network-7','X-Playdeck-Compatibility':'deck-runtime-1'}}));
+    setUpstream(async () => new Response('repaired HTML', {headers:{'Content-Type':'text/html','X-Playdeck-Transform':'deck-network-8:runtime-1:asset','X-Playdeck-Network':'deck-network-8','X-Playdeck-Compatibility':'deck-runtime-1'}}));
     assert.equal(await (await localFetch(new Request(launched),event)).text(), 'repaired HTML');
     await finish();
     assert.equal(await (await localFetch(new Request(launched),event)).text(), 'repaired HTML');
@@ -476,3 +476,14 @@ test('truncated asset bodies are never left in the local cache', async () =>
   assert.equal(await hasDownloadSpace(resume,{estimate:async()=>({quota:100*mb,usage:25*mb})}),false);
   assert.equal(await hasDownloadSpace(file,{estimate:async()=>{throw Error('Blocked');}}),true);
 });
+
+test('engine-managed disk downloads stream without a duplicate Playdeck cache write',async()=>
+  fixture(async({data,event,finish,calls})=>{
+    const managed=()=>new Request(url,{headers:{'X-Playdeck-Storage-Managed':'1'}});
+    assert.equal(await (await localFetch(managed(),event)).text(),'saved asset');
+    await finish();
+    assert.equal(await data.match(url),undefined);
+    await data.put(url,new Response('existing local file'));
+    assert.equal(await (await localFetch(managed(),event)).text(),'existing local file');
+    assert.equal(calls.length,1);
+  }));

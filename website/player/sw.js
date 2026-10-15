@@ -135,7 +135,7 @@ async function deleteCachedAsset(cache,request) {
 }
 export function canStore(request,response) {
   return isAsset(request) && request.method==='GET' && response.status===200 && response.type!=='opaque' &&
-    staticResponse(request,response) && !response.headers.has('Content-Range') && !request.headers.has('Range');
+    staticResponse(request,response) && request.headers.get('X-Playdeck-Storage-Managed')!=='1' && !response.headers.has('Content-Range') && !request.headers.has('Range');
 }
 export async function cachedRange(response,range,head=false,size=Number(response.headers.get('Content-Length') || 0)) {
   const match=/^bytes=(\d*)-(\d*)$/.exec(range || '');
@@ -241,7 +241,7 @@ export function cacheAsset(cache,key,response,event,metadata) {
     return inform({type:'sandbox:saved',session:event.playdeckSession});
   }).catch(error=>{
     writing=false;void writer.abort(error).catch(()=>{});
-    return inform({type:'sandbox:storage-error',session:event.playdeckSession,message:error.name==='QuotaExceededError'?'Browser storage is full. New files will stream until space is cleared.':'Some files could not be saved; the game will keep streaming.'});
+    return inform({type:'sandbox:storage-error',session:event.playdeckSession,message:error.name==='QuotaExceededError'?'Browser storage is full. New files will stream until space is cleared.':'Download cache write failed ('+error.name+': '+error.message+'). The game will keep streaming.'});
   });
   pendingSaves.set(key.url,saving);
   event.waitUntil(saving.finally(()=>{if(pendingSaves.get(key.url)===saving)pendingSaves.delete(key.url);}));
@@ -351,10 +351,10 @@ export async function fetchLocal(request,event) {
   }
   try {
     const fetcher=value=>networkFetch(value,event);
-    let response=(!range && request.method==='GET'?await resumeDownload(request,key.url,fetcher):null) || await fetcher(request);
+    let response=(!range && request.method==='GET' && request.headers.get('X-Playdeck-Storage-Managed')!=='1'?await resumeDownload(request,key.url,fetcher):null) || await fetcher(request);
     if(!range && request.method==='GET')response=await repairStaticAsset(request,response,fetcher);
     if(forceNetwork && response.status===304 && cached)return routeCachedResponse(cached,request);
-    if(sessionOptions.get(context.session)?.online)return response;
+    if(sessionOptions.get(context.session)?.online || request.headers.get('X-Playdeck-Storage-Managed')==='1')return response;
     if(!response.ok && response.status!==206)event.waitUntil(inform({type:'sandbox:request-error',session:context.session,url:request.url,status:response.status,contentType:response.headers.get('Content-Type')}));
     if(!await hasDownloadSpace(response)) {
       event.waitUntil(inform({type:'sandbox:storage-error',session:context.session,message:'Storage is nearly full. New files will stream without being downloaded. Clear downloads to free space; saves are kept.'}));
