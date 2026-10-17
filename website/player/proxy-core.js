@@ -196,6 +196,15 @@ function upstreamHeaders(request, target) {
     if (/^(host|cookie|authorization|proxy-.*|x-playdeck-.*|connection|keep-alive|transfer-encoding|te|trailer|upgrade|content-length|accept-encoding|origin|referer|sec-.*|cf-.*|x-forwarded-.*|forwarded|true-client-ip)$/i.test(name)) continue;
     headers.set(name,value);
   }
+  // Translate browser provenance back to the game's source origin.
+  let source = target;
+  try {
+    const ref = new URL(request.headers.get('referer') || request.referrer);
+    const route = proxyContext(ref.pathname);
+    if (ref.pathname.startsWith(route.prefix)) source = targetFromProxy(ref, route.prefix);
+  } catch {}
+  headers.set('Referer', source.href);
+  if (request.headers.has('origin')) headers.set('Origin', source.origin);
   const prefix = cookiePrefix(target.hostname);
   const cookies = (request.headers.get('cookie') || '').split(';').map(value => value.trim()).filter(value => value.startsWith(prefix)).map(value => restoreCookie(value.slice(prefix.length),target.pathname)).filter(Boolean);
   if (cookies.length) headers.set('cookie',cookies.join('; '));
