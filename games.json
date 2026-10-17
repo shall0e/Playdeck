@@ -55,12 +55,6 @@
       "description": "Explore the Far, Far Range and collect slimes in this browser port."
     },
     {
-      "name": "WorldBox",
-      "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1206560/header.jpg",
-      "playUrl": "https://ports.shall0e.workers.dev/worldbox/",
-      "description": "Create and observe a pixel-art world in this browser port of WorldBox."
-    },
-    {
       "name": "Grand Theft Auto V",
       "image": "https://cdn1.epicgames.com/offer/b0cd075465c44f87be3b505ac04a2e46/EGS_GrandTheftAutoVEnhanced_RockstarNorth_S1_2560x1440-906d8ae76a91aafc60b1a54c23fab496",
       "playUrl": "https://gta.deloskiyt.pl/",
@@ -84,6 +78,12 @@
       "image": "https://i.redd.it/igpyp0itos4h1.png",
       "playUrl": "https://pixelsuft.github.io/hl/xash.html#150",
       "description": "Original Half Life 1 on browser.",
+      "displayOptions": true
+    },
+    {
+      "name": "POSTAL 2: Paradise Lost",
+      "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/360960/capsule_616x353.jpg?t=1724965922",
+      "playUrl": "https://kahn.lol/games/postal2/",
       "displayOptions": true
     }
   ]
