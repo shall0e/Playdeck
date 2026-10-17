@@ -307,7 +307,7 @@ function restoreExpandedCanvas() {
   expandedDoc = null;
 }
 function findGameCanvas(doc, depth = 0) {
-  if (!doc || depth > 6) return null;
+  if (!doc?.defaultView || depth > 6) return null;
   let best = null,
     score = 0;
   for (const canvas of doc.querySelectorAll('canvas')) {
@@ -338,6 +338,7 @@ const legacyInputCanvases = new WeakSet();
 function alignLegacyCanvasInput(canvas) {
   // Clickteam's HTML5 runtime uses layout offsets instead of the displayed rect.
   const runtime=canvas.ownerDocument.defaultView;
+  if (!runtime) return;
   const bufferCoordinates=runtime.PlaydeckAdapter?.inputCoordinates==='buffer' || (typeof runtime.CRunApp==='function' && typeof runtime.CRun==='function') || canvas.id==='MMFCanvas';
   if (!bufferCoordinates || legacyInputCanvases.has(canvas)) return;
   legacyInputCanvases.add(canvas);
@@ -385,11 +386,12 @@ function sizeGameCanvas() {
     restoreExpandedCanvas();
     return false;
   }
-  let canvas = expandedCanvas?.isConnected ? expandedCanvas : null;
+  let canvas = expandedCanvas?.isConnected && expandedCanvas.ownerDocument.defaultView
+    ? expandedCanvas : null;
   try {
     canvas ||= findGameCanvas(frame.contentDocument);
   } catch {}
-  if (!canvas) {
+  if (!canvas?.ownerDocument.defaultView) {
     restoreExpandedCanvas();
     return false;
   }
