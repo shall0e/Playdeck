@@ -17,7 +17,7 @@ export function createSession(gameURL,mode='full',compatibility={},frameCap=0,gr
   if (![0,15,30,45,60,75,90,105,120].includes(Number(frameCap))) throw new Error('Invalid frame cap');
   const quality=graphicsOptions(graphics);
   const graphicsFlags=['adaptive','reducedFiltering','engineOptimizations'].map(key=>quality[key]?'1':'0').join('');
-  const options = {...compatibilityDefaults,...compatibility};
+  const options = {...compatibilityDefaults,...compatibility,identity:true};
   const flags = ['desktop','identity','textures'].map(key=>options[key] ? '1':'0').join('');
   const id = crypto.randomUUID();
   const game = gameId(gameURL);
