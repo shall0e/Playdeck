@@ -150,7 +150,7 @@ export default {
       const clean = new Response(response.body, {status:response.status,headers});
       const base = target.href, origin = incoming.origin;
       if (/text\/html/i.test(type)) {
-        let documentBase = base;
+        let documentBase = base, bootstrapped = false;
         return finish(new HTMLRewriter()
           .on('base', {element(element) {
             const href = element.getAttribute('href');
@@ -159,7 +159,7 @@ export default {
           .on('meta[http-equiv]', {element(element) {
             if (/^(content-security-policy|refresh)$/i.test(element.getAttribute('http-equiv') || '')) element.remove();
           }})
-          .on('head', {element(element) {element.prepend(bootstrap(base, origin,false,routePrefix,selected), {html:true});}})
+          .on('html,head,body', {element(element) {if(!bootstrapped){bootstrapped=true;element.prepend(bootstrap(base, origin,false,routePrefix,selected), {html:true});}}})
           .on('*', {element(element) {
             for (const attr of ['src','href','poster','action','formaction','data','background','xlink:href']) {
               const value = element.getAttribute(attr);

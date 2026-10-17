@@ -61,15 +61,15 @@ test('scripts fetched as data preserve bytes for custom checksum loaders', async
   }
 });
 
-test('game scripts keep native browser location and no portable identity is injected', () => {
+test('game scripts see their source domain inside the sandbox', () => {
   const source =
     'const url=location.href; const origin=window.location.origin; const path=document.location.pathname;';
-  assert.equal(
-    rewriteJS(source, 'https://game.example/main.js', 'https://player.example', '/player/games/'),
-    source,
-  );
+  const rewritten = rewriteJS(source, 'https://game.example/main.js', 'https://player.example', '/player/games/');
+  assert.ok(rewritten.includes('__playdeckSourceLocation.href'));
+  assert.ok(rewritten.includes('__playdeckSourceLocation.origin'));
+  assert.ok(rewritten.includes('__playdeckSourceLocation.pathname'));
   assert.ok(
-    !bootstrap('https://game.example/', 'https://player.example', true, '/player/games/').includes(
+    bootstrap('https://game.example/', 'https://player.example', true, '/player/games/').includes(
       '__playdeckSourceLocation',
     ),
   );
@@ -126,7 +126,7 @@ test('HTML fetched through the local worker installs the page bootstrap instead 
       {},
     );
     assert.equal(response.status, 200);
-    assert.ok(selectors.includes('head'));
+    assert.ok(selectors.includes('html,head,body'));
     assert.ok(selectors.includes('*'));
     assert.ok(response.headers.has('X-Playdeck-Transform'));
   } finally {

@@ -13,7 +13,7 @@ import {installCookieNamespace,restoreCookie} from './cookies.js';
 const LEGACY_PREFIX = '/__game/';
 const PREFIX = LEGACY_PREFIX + 'v4/';
 const LOCAL_PREFIX = '/player/games/';
-const ASSET_VERSION='deck-network-8';
+const ASSET_VERSION='deck-network-9';
 // Wrangler adds __name calls inside serialized functions when keeping names.
 // Supply the helper in the injected realm, isolated from the game's own bindings.
 const INJECTED_NAMES='const __name=(fn,name)=>{try{Object.defineProperty(fn,"name",{value:name,configurable:true});}catch{}return fn;};';
@@ -154,6 +154,8 @@ export function installPageIdentity(base, origin, prefix) {
   Object.defineProperty(globalThis, '__playdeckSourceLocation', {configurable:true,
     get:()=>globalThis.__playdeckContext?.compatibility?.identity===false ? globalThis.location : source(globalThis.location?.href || base)});
   if (typeof document === 'undefined') return;
+  // Computed and obfuscated host checks read document.domain without an AST rewrite.
+  try { Object.defineProperty(document,'domain',{configurable:true,enumerable:true,get:()=>globalThis.__playdeckSourceLocation.hostname}); } catch {}
   for (const key of ['URL','documentURI']) {
     try { Object.defineProperty(document,key,{configurable:true,get:()=>globalThis.__playdeckSourceLocation.href}); } catch {}
   }

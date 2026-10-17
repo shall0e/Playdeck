@@ -275,6 +275,7 @@ export function localKey(request,range=false){
 export function needsAssetRefresh(request,response){
   const transform=response.headers.get('X-Playdeck-Transform'),type=response.headers.get('Content-Type') || '';
   if(transform?.startsWith('hash-cache-1:'))return true;
+  if(transform?.startsWith('deck-network-') && !transform.startsWith('deck-network-9:'))return true;
   if(/text\/html|text\/css/i.test(type) && !transform)return true;
   return ['worker','sharedworker'].includes(request.destination) && !request.integrity && !transform?.endsWith(':'+request.destination);
 }

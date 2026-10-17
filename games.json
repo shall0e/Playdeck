@@ -84,8 +84,7 @@
       "name": "POSTAL 2: Paradise Lost",
       "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/360960/capsule_616x353.jpg?t=1724965922",
       "playUrl": "https://kahn.lol/games/postal2/",
-      "displayOptions": true,
-      "openInNewTab": true
+      "displayOptions": true
     }
   ]
 }
