@@ -103,7 +103,7 @@ test('a session repairs cached raw HTML once without redownloading saved game da
     const launched = origin + '/player/games/.launch/12345678-abcd/full/101/gameid/game.example/index.html';
     await data.put(canonical, new Response('broken raw HTML', {headers:{'Content-Type':'text/html'}}));
     await data.put(url, new Response('saved binary'));
-    setUpstream(async () => new Response('repaired HTML', {headers:{'Content-Type':'text/html','X-Playdeck-Transform':'deck-network-8:runtime-1:asset','X-Playdeck-Network':'deck-network-8','X-Playdeck-Compatibility':'deck-runtime-1'}}));
+    setUpstream(async () => new Response('repaired HTML', {headers:{'Content-Type':'text/html','X-Playdeck-Transform':'deck-network-9:runtime-1:asset','X-Playdeck-Network':'deck-network-9','X-Playdeck-Compatibility':'deck-runtime-1'}}));
     assert.equal(await (await localFetch(new Request(launched),event)).text(), 'repaired HTML');
     await finish();
     assert.equal(await (await localFetch(new Request(launched),event)).text(), 'repaired HTML');

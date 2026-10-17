@@ -122,7 +122,7 @@ test('navigation destinations are mapped without rewriting game data or shadowed
 test('existing cached documents get new network hooks locally without changing saved game bytes',async()=>{
   const request=new Request(origin+prefix+'game.example/index.html');
   const response=await routeCachedResponse(new Response('<html><head></head><body>saved</body></html>',{headers:{'Content-Type':'text/html','X-Playdeck-Compatibility':'deck-runtime-1'}}),request);
-  const text=await response.text();assert(text.includes('installNetworkProxy'));assert.equal(response.headers.get('X-Playdeck-Network'),'deck-network-8');
+  const text=await response.text();assert(text.includes('installNetworkProxy'));assert.equal(response.headers.get('X-Playdeck-Network'),'deck-network-9');
   const binary=new Response(new Uint8Array([1,2,3]));assert.equal(await routeCachedResponse(binary,request),binary);
 });
 import {rewriteImportMap} from '../website/player/rewrite.js';
