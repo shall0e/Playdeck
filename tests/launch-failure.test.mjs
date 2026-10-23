@@ -9,6 +9,9 @@ test('failed launch documents retain recovery controls and cannot announce game 
  vm.runInContext(boot.slice(boot.indexOf('function showDocumentFailure('),boot.indexOf("navigator.serviceWorker?.addEventListener('message'")),context);
  context.showDocumentFailure({url:'https://player.example/player/games/game.example/',status:530});
  assert.equal(context.gameReady,false);assert.equal(elements.get('#loading').hidden,false);assert.equal(elements.get('#retry').hidden,false);assert.equal(elements.get('#continue').hidden,true);assert.match(elements.get('#status').textContent,/HTTP 530/);assert.equal(failures[0].status,530);
+ context.lastDownload=0;context.checkDownloads=()=>{};
+ vm.runInContext(boot.slice(boot.indexOf('function downloadActivity('),boot.indexOf('function monitorDownloads(')),context);
+ context.downloadActivity({active:0,lastDownload:Date.now()});assert.match(elements.get('#status').textContent,/HTTP 530/);
  context.frame={};
  vm.runInContext(boot.slice(boot.indexOf('function revealGame('),boot.indexOf("$('#continue').onclick")),context);
  context.revealGame();assert.equal(context.gameReady,false);

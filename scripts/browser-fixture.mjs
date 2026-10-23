@@ -13,6 +13,7 @@ export function fixtureServer(){
     try{
       if(path.startsWith('/player/games/')){
         const context=proxyContext(path),source='https://'+path.slice(context.prefix.length)+url.search,remote=new URL(source),file=remote.pathname.split('/').pop();headers['X-Playdeck-Route']=context.prefix;headers['X-Playdeck-Compatibility']='deck-runtime-1';headers['X-Playdeck-Network']=ASSET_VERSION;headers['X-Playdeck-Transform']=ASSET_VERSION+':runtime-1:asset';
+        if(remote.pathname.includes('/unavailable/')){headers['Content-Type']='text/html';res.writeHead(530,headers);res.end('<!doctype html><html><body>Source unavailable</body></html>');return;}
         if(file==='asset.bin'){const data=Buffer.alloc(16*1024*version,version);headers['Content-Type']='application/octet-stream';headers['Content-Length']=data.length;headers['ETag']='"fixture-'+version+'"';headers['Accept-Ranges']='bytes';if(req.headers['if-none-match']===headers['ETag']){res.writeHead(304,headers);res.end();return;}res.writeHead(200,headers);res.end(data);return;}
         if(file==='manifest.json'){const body=broken?'<html>wrong response</html>':JSON.stringify({version});headers['Content-Type']=broken?'text/html':'application/json';res.writeHead(200,headers);res.end(body);return;}
         if(file==='engine.js'){

@@ -109,7 +109,7 @@ function downloadActivity(data) {
   if (!Number.isFinite(data.active) || !Number.isFinite(data.lastDownload)) return;
   activeDownloads = data.active;
   lastDownload = Math.max(lastDownload, data.lastDownload);
-  if (!gameReady)
+  if (!gameReady && !failedDocument)
     $('#status').textContent = activeDownloads
       ? `Downloading game files (${activeDownloads} active).`
       : 'Finishing loading.';
