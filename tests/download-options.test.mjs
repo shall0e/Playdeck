@@ -27,9 +27,10 @@ test('omits only declared optional categories and preserves manifest identity, h
   assert.equal(result.version,manifest.version);assert.equal(result.files[0],manifest.files[0]);assert.equal(JSON.stringify(manifest),original);
   const video=selectDownloadManifest(manifest,{video:false});assert.equal(video.totalBytes,150);assert.equal(video.files.length,3);
   assert.equal(selectDownloadManifest(manifest).totalBytes,160);
+  assert.equal(selectDownloadManifest(video,{video:false}),video,'Explicit custom-loader selection must be idempotent');
 });
 test('unknown schemas, undeclared files, unsafe sizes and unrelated JSON remain untouched',()=>{
-  for(const value of [null,{},[],{...manifest,playdeckDownloads:undefined},{...manifest,playdeckDownloads:{version:2}},{...manifest,files:[{size:-1,optional:true,category:'video'}]}])assert.equal(selectDownloadManifest(value,{video:false}),value);
+  for(const value of [null,{},[],{...manifest,playdeckDownloads:undefined},{...manifest,playdeckDownloads:{version:2}},{...manifest,files:[{size:-1,optional:true,category:'video'}]},{...manifest,files:[{size:Number.MAX_SAFE_INTEGER},{size:1,optional:true,category:'video'}]}])assert.equal(selectDownloadManifest(value,{video:false}),value);
   const result=selectDownloadManifest({...manifest,files:[{path:'movie.bik',size:1},{path:'unknown',size:2,optional:true,category:'maps'}]},{video:false});
   assert.equal(result.files.length,2);
 });
