@@ -1,7 +1,7 @@
 name: Verify Playdeck features
 on:
   push:
-    branches: [playdeck-feature-rollout]
+    branches: [main, playdeck-feature-rollout]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -20,6 +20,7 @@ jobs:
       - run: npm install --no-save --package-lock=false playwright@1.58.2
       - run: npx playwright install --with-deps chromium
       - run: node scripts/verify-player-browser.mjs
+      - run: node scripts/verify-proxy-network.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

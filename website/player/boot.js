@@ -73,13 +73,14 @@ let renderBudget = initialRenderBudget(
 );
 let pageLoaded = false,
   gameReady = false,
+  failedDocument = null,
   idleTimer,
   activityPoll,
   slowTimer;
 let activeDownloads = null,
   lastDownload = Date.now();
 function revealGame() {
-  if (gameReady || !frame) return;
+  if (gameReady || failedDocument || !frame) return;
   gameReady = true;
   for (const doc of cleanupDocuments) doc.dispatchEvent(new Event('timebomb:clean-extras'));
   clearInterval(activityPoll);
@@ -96,7 +97,7 @@ function revealGame() {
 $('#continue').onclick = revealGame;
 function checkDownloads() {
   clearTimeout(idleTimer);
-  if (gameReady || !pageLoaded || activeDownloads !== 0) return;
+  if (gameReady || failedDocument || !pageLoaded || activeDownloads !== 0) return;
   const remaining = 2000 - (Date.now() - lastDownload);
   if (remaining > 0) {
     idleTimer = setTimeout(checkDownloads, remaining);
@@ -1069,6 +1070,7 @@ function stabilizeGameMouse(doc) {
 }
 function mount(url) {
   tearDownLaunch();gameFailureReported=false;
+  failedDocument = null;
   restoreExpandedCanvas();
   mouseLockTarget = null;
   mouseLockDocument = null;
@@ -1117,6 +1119,11 @@ function mount(url) {
       cleanGameDocument(frame.contentDocument);
     } catch {}
     configChild();deck?.mounted();
+    try {
+      const status=frame.contentWindow.performance.getEntriesByType('navigation')[0]?.responseStatus;
+      if(status>=400)failedDocument={url:frame.contentWindow.location.href,status};
+    } catch {}
+    if(failedDocument){showDocumentFailure(failedDocument);return;}
     checkDownloads();
   });
   frame.src = url;
@@ -1183,8 +1190,17 @@ window.addEventListener(
   },
   true,
 );
+function showDocumentFailure(data) {
+  failedDocument=data;gameReady=false;
+  clearInterval(activityPoll);clearTimeout(idleTimer);clearTimeout(slowTimer);
+  $('#loading').hidden=false;$('#loading .loader-mark').hidden=true;
+  $('#continue').hidden=true;$('#retry').hidden=false;
+  $('#status').textContent='The game host returned HTTP '+data.status+'. The game did not start.';
+  deck?.failure({...data,kind:'request-failure',detail:'The game host could not serve its launch page.'});
+}
 navigator.serviceWorker?.addEventListener('message', (event) => {
   if(event.data?.session && event.data.session!==launchSession?.id)return;
+  if(event.data?.type==='sandbox:request-error' && event.data.document && event.data.url===frame?.src)showDocumentFailure(event.data);
   if (event.data?.type === 'sandbox:downloads') downloadActivity(event.data);
   if (event.data?.type === 'sandbox:saved') refreshStats();
   if (event.data?.type === 'sandbox:storage-error') {

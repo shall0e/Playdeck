@@ -356,7 +356,7 @@ export async function fetchLocal(request,event) {
     if(!range && request.method==='GET')response=await repairStaticAsset(request,response,fetcher);
     if(forceNetwork && response.status===304 && cached)return routeCachedResponse(cached,request);
     if(sessionOptions.get(context.session)?.online || request.headers.get('X-Playdeck-Storage-Managed')==='1')return response;
-    if(!response.ok && response.status!==206)event.waitUntil(inform({type:'sandbox:request-error',session:context.session,url:request.url,status:response.status,contentType:response.headers.get('Content-Type')}));
+    if(!response.ok && response.status!==206)event.waitUntil(inform({type:'sandbox:request-error',session:context.session,url:request.url,status:response.status,document:request.mode==='navigate' || request.destination==='document',contentType:response.headers.get('Content-Type')}));
     if(!await hasDownloadSpace(response)) {
       event.waitUntil(inform({type:'sandbox:storage-error',session:context.session,message:'Storage is nearly full. New files will stream without being downloaded. Clear downloads to free space; saves are kept.'}));
       return routeCachedResponse(response,request);

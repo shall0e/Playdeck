@@ -148,7 +148,7 @@ try {
     new URL(origin).origin,
     'Timebomb embeds a different Playdeck deployment',
   );
-  await frame.locator('#toolbar-edge').click({ force: true });
+  await frame.locator('#toolbar-edge').click();
   await assertIcon(frame, '#toggle', 'gamepad-2');
   await frame.locator('#badge').click();
   console.log(
@@ -174,6 +174,8 @@ try {
   if ((await frame.locator('#badge').getAttribute('aria-expanded')) !== 'true') {
     await frame.locator('#badge').click();
   }
+  const embeddedCompatibility=frame.locator('body > #panel .deck-section > summary').filter({hasText:'Compatibility'});
+  if(!await embeddedCompatibility.evaluate(el=>el.parentElement.open))await embeddedCompatibility.click();
   await frame.locator('#performance-control select').waitFor({ state: 'visible' });
   await page.screenshot({ path: 'playdeck-timebomb.png' });
   assert.deepEqual(errors, []);
