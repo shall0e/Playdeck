@@ -1,3 +1,4 @@
+import {downloadOptions} from './download-options.js';
 import {graphicsOptions} from './graphics-quality.js';
 import {proxyURL,targetFromProxy} from './network-url.js';
 export const GAME_PREFIX = '/player/games/';
@@ -13,22 +14,22 @@ export function gameId(value) {
   return (hash >>> 0).toString(36);
 }
 
-export function createSession(gameURL,mode='full',compatibility={},frameCap=0,graphics={}) {
+export function createSession(gameURL,mode='full',compatibility={},frameCap=0,graphics={},downloads={}) {
   if (![0,15,30,45,60,75,90,105,120].includes(Number(frameCap))) throw new Error('Invalid frame cap');
-  const quality=graphicsOptions(graphics);
+  const quality=graphicsOptions(graphics),assets=downloadOptions(downloads);
   const graphicsFlags=['adaptive','reducedFiltering','engineOptimizations'].map(key=>quality[key]?'1':'0').join('');
   const options = {...compatibilityDefaults,...compatibility,identity:true};
   const flags = ['desktop','identity','textures'].map(key=>options[key] ? '1':'0').join('');
   const id = crypto.randomUUID();
   const game = gameId(gameURL);
-  return {id,game,mode,graphics:quality,compatibility:options,prefix:GAME_PREFIX+'.launch/'+id+'/'+mode+'/'+flags+'/'+game+'/'+(Number(frameCap)?'fps-'+Number(frameCap)+'/':'')+'gfx-'+Math.round(quality.renderScale*100)+'-'+graphicsFlags+'/'};
+  return {id,game,mode,downloads:assets,graphics:quality,compatibility:options,prefix:GAME_PREFIX+'.launch/'+id+'/'+mode+'/'+flags+'/'+game+'/'+(Number(frameCap)?'fps-'+Number(frameCap)+'/':'')+'gfx-'+Math.round(quality.renderScale*100)+'-'+graphicsFlags+'/dl-'+['textures','audio','video'].map(key=>assets[key]?'1':'0').join('')+'/'};
 }
 
 // Also serialized into page and worker realms. It must have no external bindings.
 export function proxyContext(pathname) {
   const root='/player/games/';
-  const match=/^\/player\/games\/\.launch\/([a-z0-9-]{8,64})\/(full|auto|fast|native)\/([01]{3})\/([a-z0-9]+)\/(?:fps-(15|30|45|60|75|90|105|120)\/)?(?:gfx-(25|50|75|100)-([01]{3})\/)?/i.exec(pathname);
-  return match ? {prefix:match[0],session:match[1],mode:match[2],game:match[4],frameCap:Number(match[5] || 0),graphics:{renderScale:Number(match[6] || 100)/100,adaptive:!match[7] || match[7][0]==='1',reducedFiltering:!match[7] || match[7][1]==='1',engineOptimizations:!match[7] || match[7][2]==='1'},compatibility:{desktop:match[3][0]==='1',identity:match[3][1]==='1',textures:match[3][2]==='1'}} : {prefix:root,session:null,mode:null,game:null,frameCap:0,graphics:{renderScale:1,adaptive:true,reducedFiltering:true,engineOptimizations:true},compatibility:{desktop:true,identity:true,textures:true}};
+  const match=/^\/player\/games\/\.launch\/([a-z0-9-]{8,64})\/(full|auto|fast|native)\/([01]{3})\/([a-z0-9]+)\/(?:fps-(15|30|45|60|75|90|105|120)\/)?(?:gfx-(25|50|75|100)-([01]{3})\/)?(?:dl-([01]{3})\/)?/i.exec(pathname);
+  return match ? {prefix:match[0],session:match[1],mode:match[2],game:match[4],downloads:{textures:!match[8] || match[8][0]==='1',audio:!match[8] || match[8][1]==='1',video:!match[8] || match[8][2]==='1'},frameCap:Number(match[5] || 0),graphics:{renderScale:Number(match[6] || 100)/100,adaptive:!match[7] || match[7][0]==='1',reducedFiltering:!match[7] || match[7][1]==='1',engineOptimizations:!match[7] || match[7][2]==='1'},compatibility:{desktop:match[3][0]==='1',identity:match[3][1]==='1',textures:match[3][2]==='1'}} : {prefix:root,session:null,mode:null,game:null,downloads:{textures:true,audio:true,video:true},frameCap:0,graphics:{renderScale:1,adaptive:true,reducedFiltering:true,engineOptimizations:true},compatibility:{desktop:true,identity:true,textures:true}};
 }
 
 export function canonicalGameURL(value) {

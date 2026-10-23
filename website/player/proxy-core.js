@@ -1,3 +1,4 @@
+import {installDownloadPolicy,selectDownloadManifest} from './download-options.js';
 import {proxyURL,targetFromProxy} from './network-url.js';
 export {proxyURL,targetFromProxy} from './network-url.js';
 import {installNetworkProxy} from './network.js';
@@ -13,7 +14,7 @@ import {installCookieNamespace,restoreCookie} from './cookies.js';
 const LEGACY_PREFIX = '/__game/';
 const PREFIX = LEGACY_PREFIX + 'v4/';
 const LOCAL_PREFIX = '/player/games/';
-const ASSET_VERSION='deck-network-9';
+const ASSET_VERSION='deck-network-10';
 // Wrangler adds __name calls inside serialized functions when keeping names.
 // Supply the helper in the injected realm, isolated from the game's own bindings.
 const INJECTED_NAMES='const __name=(fn,name)=>{try{Object.defineProperty(fn,"name",{value:name,configurable:true});}catch{}return fn;};';
@@ -117,7 +118,7 @@ export function bootstrap(base, origin, worker = false, prefix = PREFIX, mode='a
   const params = [base, origin, prefix].map(value => JSON.stringify(value).replace(/</g, '\\u003c')).join(',');
   const local=prefix.startsWith(LOCAL_PREFIX);
   const context=local?'const context=('+proxyContext.toString()+')(globalThis.location?.pathname || '+JSON.stringify(new URL(origin+prefix+new URL(base).host+new URL(base).pathname).pathname)+');context.mode ||= '+JSON.stringify(mode)+';context.source=' + JSON.stringify(base) + ';globalThis.__playdeckContext=context;':'';
-  const runtime=local?'('+installGameRuntime.toString()+')(context);':'';
+  const runtime=local?'('+installDownloadPolicy.toString()+')(context,'+selectDownloadManifest.toString()+');('+installGameRuntime.toString()+')(context);':'';
   const desktop=local?'if(context.compatibility.desktop)('+desktopOverrides.toString()+')('+desktopMedia.toString()+','+JSON.stringify(DESKTOP_UA)+',context.session?"native":context.mode);':'';
   const pointer=local?'('+installPointerCompatibility.toString()+')();':'';
   const identity=local && proxyContext(prefix).compatibility.identity?'('+installPageIdentity.toString()+')('+params+');':'';
@@ -125,7 +126,7 @@ export function bootstrap(base, origin, worker = false, prefix = PREFIX, mode='a
   const graphics=local?'('+installGraphicsQuality.toString()+')(context);':'';
   const networkHelpers=','+proxyURL.toString()+','+targetFromProxy.toString();
   const workerCap=local?'('+installFrameCap.toString()+')('+Number(proxyContext(prefix).frameCap || 0)+');':'';
-  const workerPrelude='(()=>{'+INJECTED_NAMES+workerCap+(local?'('+installGraphicsQuality.toString()+')('+JSON.stringify({...proxyContext(prefix),source:base})+');':'')+'('+CLIENT_HOOK+')('+params+',null'+networkHelpers+');})();';
+  const workerPrelude='(()=>{'+INJECTED_NAMES+workerCap+(local?'('+installDownloadPolicy.toString()+')('+JSON.stringify(proxyContext(prefix))+','+selectDownloadManifest.toString()+');':'')+(local?'('+installGraphicsQuality.toString()+')('+JSON.stringify({...proxyContext(prefix),source:base})+');':'')+'('+CLIENT_HOOK+')('+params+',null'+networkHelpers+');})();';
   const script='(()=>{if(typeof globalThis.registerProcessor===\"function\" || typeof globalThis.registerPaint===\"function\")return;if(globalThis.__playdeckProxyInstalled)return;globalThis.__playdeckProxyInstalled=true;'+INJECTED_NAMES+context+runtime+identity+desktop+performance+graphics+pointer+s3tcBootstrap(base,prefix)+'('+installCookieNamespace.toString()+')('+params+','+targetFromProxy.toString()+');('+CLIENT_HOOK+')('+params+','+JSON.stringify(workerPrelude)+networkHelpers+');})();';
   return worker?script:'<script data-cfasync="false" data-playdeck-bootstrap>'+script+'</script>';
 }

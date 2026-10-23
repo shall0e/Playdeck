@@ -53,6 +53,7 @@ function zip(entries) {
 }
 rmSync('dist', { recursive: true, force: true });
 cpSync('website', 'dist', { recursive: true });
+cpSync('docs', 'dist/docs', { recursive: true });
 buildSync({
   entryPoints: ['website/player/toolbar-icons.js'],
   outfile: 'dist/player/toolbar-icons.js',
@@ -72,7 +73,7 @@ const html = readFileSync('dist/player/index.html', 'utf8')
   .replace('/player-ui.css?v=player-updates-1', '/player-ui.css?v=' + encodeURIComponent(revision))
   .replace('href="/player/deck.css"', 'href="/player/deck.css?v=' + encodeURIComponent(revision) + '"');
 writeFileSync('dist/player/index.html', html);
-const source = ['website', 'tests', 'scripts', '.github'].flatMap((root) =>
+const source = ['website', 'tests', 'scripts', '.github', 'docs'].flatMap((root) =>
   files(root).map((file) => ({ ...file, name: root + '/' + file.name })),
 );
 for (const name of ['README.md', 'LICENSE', 'package.json', 'wrangler.jsonc', '.gitignore'])

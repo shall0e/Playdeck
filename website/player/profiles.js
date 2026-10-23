@@ -1,15 +1,16 @@
+import {downloadOptions,downloadDefaults} from './download-options.js';
 import {graphicsOptions,graphicsDefaults} from './graphics-quality.js';
 import {gameId,compatibilityDefaults} from './session.js';
 import {displayConfig} from './display.js';
 const KEY='playdeck.profiles.v1';
-export const profileDefaults={performance:'auto',frameCap:0,graphics:graphicsDefaults,compatibility:compatibilityDefaults,hidePageExtras:true,muted:false,keepAwake:false,pauseBackground:true,muteBackground:false,controllerNavigation:true,touch:false,touchOpacity:0.65,touchSize:60,touchSide:'left',touchBindings:['Space','KeyE','KeyR','ShiftLeft'],touchLayout:null,showDiagnostics:false};
+export const profileDefaults={downloads:downloadDefaults,performance:'auto',frameCap:0,graphics:graphicsDefaults,compatibility:compatibilityDefaults,hidePageExtras:true,muted:false,keepAwake:false,pauseBackground:true,muteBackground:false,controllerNavigation:true,touch:false,touchOpacity:0.65,touchSize:60,touchSide:'left',touchBindings:['Space','KeyE','KeyR','ShiftLeft'],touchLayout:null,showDiagnostics:false};
 export function validateProfile(value={}) {
   const modes=['full','auto','fast','native'];
   if(value.performance!==undefined && !modes.includes(value.performance))throw new Error('Invalid performance mode');
   if (value.frameCap!==undefined && ![0,15,30,45,60,75,90,105,120].includes(value.frameCap)) throw new Error('Invalid frame cap');
   const compatibility={...compatibilityDefaults};for(const key of Object.keys(compatibility))if(value.compatibility?.[key]!==undefined){if(typeof value.compatibility[key]!=='boolean')throw new Error('Invalid compatibility setting');compatibility[key]=value.compatibility[key];}
   compatibility.identity=false;
-  const next={...profileDefaults,compatibility,performance:value.performance || profileDefaults.performance,frameCap:value.frameCap ?? 0,graphics:graphicsOptions(value.graphics)};
+  const next={...profileDefaults,downloads:downloadOptions(value.downloads),compatibility,performance:value.performance || profileDefaults.performance,frameCap:value.frameCap ?? 0,graphics:graphicsOptions(value.graphics)};
   for(const key of ['hidePageExtras','muted','keepAwake','pauseBackground','muteBackground','controllerNavigation','touch','showDiagnostics'])if(typeof value[key]==='boolean')next[key]=value[key];
   next.touchOpacity=Math.max(.15,Math.min(1,Number(value.touchOpacity) || .65));next.touchSize=Math.max(40,Math.min(100,Number(value.touchSize) || 60));next.touchSide=value.touchSide==='right'?'right':'left';
   if(Array.isArray(value.touchBindings) && value.touchBindings.length===4 && value.touchBindings.every(key=>typeof key==='string' && /^(Key[A-Z]|Digit[0-9]|Space|ShiftLeft|ControlLeft|Arrow(?:Up|Down|Left|Right))$/.test(key)))next.touchBindings=value.touchBindings;

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {readFileSync} from 'node:fs';
+import {gameId} from '../website/player/session.js';
 import {fixtureServer} from './browser-fixture.mjs';
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const fixture=fixtureServer(),origin=await fixture.start();
@@ -43,6 +44,19 @@ try{
   const phoneBox=await phone.locator('body > iframe').boundingBox();assert(phoneBox.x>=-1 && phoneBox.y>=-1 && phoneBox.x+phoneBox.width<=391 && phoneBox.y+phoneBox.height<=845,'Mobile game must fit the viewport');
   await phone.locator('.game-display > summary').click();await phone.locator('#badge').click();const phonePanel=await phone.locator('body > #panel').boundingBox();assert(phonePanel.x>=0 && phonePanel.x+phonePanel.width<=390,'Mobile menu must fit the viewport');await phone.close();
   const failed=await context.newPage();await failed.goto(launch('unavailable','full'));await failed.locator('#status').filter({hasText:'HTTP 530'}).waitFor({state:'visible',timeout:15000});assert.equal(await failed.locator('#retry').isVisible(),true);assert.equal(await failed.locator('#loading').isVisible(),true);await failed.close();
+  const lightURL='https://fixture.example/light/',lightId=gameId(lightURL);
+  await page.evaluate(({id,url})=>{const all=JSON.parse(localStorage.getItem('playdeck.profiles.v1') || '{}');all[id]={id,url,profile:{downloads:{video:false}}};localStorage.setItem('playdeck.profiles.v1',JSON.stringify(all));},{id:lightId,url:lightURL});
+  await page.goto(launch('light'));await page.waitForFunction(()=>document.querySelector('iframe')?.contentWindow.fixture?.downloadsReady);await page.locator('#loading').waitFor({state:'hidden'});
+  assert.equal(await page.evaluate(()=>document.querySelector('iframe').contentWindow.fixture.manifest.totalBytes),0);
+  const optionalRequests=()=>[...fixture.counts].filter(([path])=>path.endsWith('/light/optional.bin')).reduce((sum,[,count])=>sum+count,0);
+  assert.equal(optionalRequests(),0,'Omitted optional assets must never be requested');
+  await page.locator('#badge').click();await openSection('Downloads');
+  const video=page.locator('[data-download-category="video"]');assert.equal(await video.isChecked(),false);
+  await video.check();await page.waitForFunction(()=>document.querySelector('iframe')?.contentWindow.fixture?.optional?.length===1);
+  assert.equal(optionalRequests(),1,'Re-enabling optional assets must fetch the missing file');
+  await page.locator('#loading').waitFor({state:'hidden'});await page.locator('#badge').click();await openSection('Downloads');
+  await video.uncheck();await page.waitForFunction(()=>document.querySelector('iframe')?.contentWindow.fixture?.downloadsReady && document.querySelector('iframe').contentWindow.fixture.manifest.totalBytes===0);
+  assert.equal(optionalRequests(),1);assert.equal(await page.evaluate(()=>document.querySelector('iframe').contentWindow.__playdeckContext.downloads.video),false);
   await page.screenshot({path:'playdeck-features.png'});
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,warmAssetRequests:after-before,modeChange:'full -> fast without downloads',isolatedSaves:true,menuPause:true,updateRollback:true,packageRoundTrip:true,saveRoundTrip:true,jsonRepair:true,mobileLayout:true,failedLaunchRecovery:true,pageErrors:errors}));await context.close();
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,warmAssetRequests:after-before,modeChange:'full -> fast without downloads',isolatedSaves:true,menuPause:true,updateRollback:true,packageRoundTrip:true,saveRoundTrip:true,jsonRepair:true,mobileLayout:true,failedLaunchRecovery:true,optionalDownloads:true,pageErrors:errors}));await context.close();
 }finally{await browser.close();await fixture.close();}

@@ -104,3 +104,5 @@ Each instance has its own browser-origin storage. Existing key names are retaine
 - `dist/`: generated deployment output, ignored by Git
 
 Toolbar icons use Lucide Icons under the ISC License: https://lucide.dev/
+
+Optional game download settings and the shared loader contract are documented in [docs/download-options.md](docs/download-options.md).

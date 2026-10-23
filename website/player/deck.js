@@ -44,6 +44,14 @@ export function installDeck(api){
   actions(compatibility,[['Disable page cleanup',async()=>{save({...profile,hidePageExtras:false});const url=new URL(location.href);url.searchParams.set('hidePageExtras','false');location.assign(url.href);}],['Source defaults',async()=>{save({...profile,compatibility:{desktop:false,identity:false,textures:false},performance:'native',frameCap:0,graphics:{renderScale:1,adaptive:false,reducedFiltering:false,engineOptimizations:false},hidePageExtras:false});const url=new URL(location.href);url.searchParams.set('performance','native');url.searchParams.set('frameCap','0');for(const [key,value] of Object.entries({renderScale:1,adaptive:false,reducedFiltering:false,engineOptimizations:false}))url.searchParams.set(key,String(value));url.searchParams.set('hidePageExtras','false');location.assign(url.href);}],[ 'Reset game settings',async()=>{if(gameURL)resetProfile(gameURL);const url=new URL(location.href);for(const key of ['performance','ratio','forceController','hidePageExtras','frameCap','renderScale','adaptive','reducedFiltering','engineOptimizations'])url.searchParams.delete(key);location.assign(url.href);}],[ 'Run online once',async()=>api.reload({online:true})]]);
 
   const downloads=section('Downloads');
+  const assetNote=document.createElement('p');assetNote.textContent='Include optional assets. Changes restart the game. Required files stay included; support depends on the game.';downloads.append(assetNote);
+  const selectionNote=document.createElement('p');selectionNote.id='download-selection';selectionNote.textContent='Optional asset support has not been reported by this game.';
+  for(const [key,title] of [['textures','Optional texture packs'],['audio','Optional audio'],['video','Optional videos']]){
+    const row=document.createElement('label'),input=document.createElement('input'),text=document.createElement('span');input.type='checkbox';input.checked=profile.downloads[key];input.dataset.downloadCategory=key;text.textContent=title;row.append(input,text);downloads.append(row);
+    input.onchange=run(async()=>{save({...profile,downloads:{...profile.downloads,[key]:input.checked}});await api.reload();});
+  }
+  downloads.append(selectionNote);
+
   // Keep the original controls and IDs so the loader, cache statistics,
   // clear handlers, and local download status continue to work unchanged.
   for(const control of ['.download-row','#storage-note','#clear']){
@@ -51,6 +59,7 @@ export function installDeck(api){
     if(node)downloads.append(node);
   }
   const downloadNote=document.createElement('p');downloadNote.id='deck-download-status';downloadNote.textContent='Files are stored as the game requests them. Later levels and online features may still need internet.';downloads.append(downloadNote);
+  window.addEventListener('message',event=>{const data=event.data;if(event.origin!==location.origin || event.source!==api.getFrame()?.contentWindow || data?.session!==api.getSession()?.id || data?.kind!=='download-selection')return;selectionNote.textContent=(data.supported?.length?'Supported: '+data.supported.join(', ')+'. ':'No optional packs declared. ')+(Number.isFinite(data.omittedBytes)?bytes(data.omittedBytes)+' omitted.':'');});
   const quota=document.createElement('p');downloads.append(quota);
   const fileList=document.createElement('div');fileList.className='deck-files';downloads.append(fileList);
   async function library(){const result=await api.send('sandbox:library');lastFiles=result.files || [];return lastFiles;}

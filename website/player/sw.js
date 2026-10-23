@@ -1,14 +1,15 @@
+import {ASSET_VERSION} from './proxy-core.js';
 import {BUILD_REVISION,FEATURE_RELEASE} from './version.js';
 import {canonicalGameURL,proxyContext,recoverGameRequest,proxyOutgoingGameRequest,gameRequestClient} from './session.js';
 import {staticResponse,routeCachedResponse} from './cache-policy.js';
 import {partialWriter,resumeDownload,clearPartial,clearAllPartials} from './download-store.js';
 const PREFIX='/player/games/';
 const CACHE='timebomb-local-games-v1';
-const SHELL='playdeck-local-shell-v37';
+const SHELL='playdeck-local-shell-v38';
 const METADATA='playdeck-local-hashes-v1';
 const SHELL_FILES=['/','/home.css','/home.js','/player-ui.css','/player/','/player/boot.js','/player/controller.js','/player/performance.js','/player/graphics-quality.js','/player/settings.js','/player/toolbar.js','/player/toolbar-icons.js','/player/display.js','/player/viewport.js','/player/launch-options.js','/player/s3tc.js'];
 SHELL_FILES.push('/player/version.js','/player/feature-tools.js','/player/cookies.js','/player/session.js','/player/options.js','/player/game-runtime.js','/player/proxy-core.js','/player/rewrite.js','/player/vendor/acorn.js','/player/cache-policy.js','/player/download-store.js','/player/deck.js','/player/deck.css','/player/profiles.js','/player/saves.js','/player/touch.js','/player/capture.js','/player/packages.js','/player/manifest.webmanifest','/player/icon.svg','/player/build.json');
-SHELL_FILES.push('/player/network.js','/player/network-url.js');
+SHELL_FILES.push('/player/download-options.js','/player/network.js','/player/network-url.js');
 const OLD_PREFIX='/__sandbox/games/';
 
 export class DownloadActivity {
@@ -275,7 +276,7 @@ export function localKey(request,range=false){
 export function needsAssetRefresh(request,response){
   const transform=response.headers.get('X-Playdeck-Transform'),type=response.headers.get('Content-Type') || '';
   if(transform?.startsWith('hash-cache-1:'))return true;
-  if(transform?.startsWith('deck-network-') && !transform.startsWith('deck-network-9:'))return true;
+  if(transform?.startsWith('deck-network-') && !transform.startsWith(ASSET_VERSION+':'))return true;
   if(/text\/html|text\/css/i.test(type) && !transform)return true;
   return ['worker','sharedworker'].includes(request.destination) && !request.integrity && !transform?.endsWith(':'+request.destination);
 }
