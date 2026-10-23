@@ -1,4 +1,5 @@
 import {BUILD_REVISION,FEATURE_RELEASE} from './player/version.js';
+import {checkAvailability} from './player/availability.js';
 import {LEGACY_PREFIX,PREFIX,LOCAL_PREFIX,ASSET_VERSION,INJECTED_NAMES,DESKTOP_UA,desktopMedia,desktopOverrides,installPointerCompatibility,publicHost,targetFromProxy,proxyURL,CLIENT_HOOK,bootstrap,s3tcBootstrap,rewriteCSS,rewritePageIdentity,installPageIdentity,rewriteJS,rewriteGameCompatibility,cookiePrefix,scopedCookie,upstreamHeaders,proxyHeaders,contentHashResponse} from './player/proxy-core.js';
 import {proxyContext,recoverGameRequest} from './player/session.js';
 import {executableScript,rewriteImportMap} from './player/rewrite.js';
@@ -9,6 +10,7 @@ export default {
   async fetch(request, env) {
     request = recoverGameRequest(request,[request.headers.get('referer'),request.referrer]);
     const incoming = new URL(request.url);
+    if(incoming.pathname==='/player/availability')return checkAvailability(request);
     if(incoming.pathname==='/player/worker-version.json')return Response.json({revision:BUILD_REVISION,features:FEATURE_RELEASE,compatibility:'deck-runtime-1'},{headers:{'Cache-Control':'no-store','Cross-Origin-Resource-Policy':'cross-origin'}});
     const oldPlayerRoute=['/__sandbox','/_sandbox'].find(path=>incoming.pathname===path || incoming.pathname.startsWith(path+'/'));
     // Service-worker update requests may not follow redirects. Keep previous
